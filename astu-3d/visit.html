@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ASTU Campus · 3D visit</title>
+  </head>
+  <body data-mode="orbit">
+    <div id="app"></div>
+    <div id="loading">
+      <div class="ld"><span class="logo">A</span><b>ASTU · 3D visit</b><i>Building the scene…</i><div class="bar"></div></div>
+    </div>
+    <aside id="hud"></aside>
+    <div id="where"></div>
+    <div id="mini"></div>
+    <div id="cross"></div>
+    <div id="toast" role="status"></div>
+    <div id="help">
+      <span data-m="walk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move<em></em><kbd>Shift</kbd> run<em></em><kbd>Space</kbd> jump<em></em>mouse to look<em></em><kbd>Esc</kbd> pause</span>
+      <span data-m="orbit">drag to rotate<em></em>right-drag to pan<em></em>scroll to zoom<em></em><kbd>O</kbd> walk<em></em><kbd>H</kbd> hide UI</span>
+    </div>
+    <div id="pause" class="hidden">
+      <div>
+        <h2>Paused</h2>
+        <p>Click resume to keep walking. The mouse looks around once it is captured.</p>
+        <button id="resume">Resume walking</button>
+        <button id="toOrbit">Fly around instead</button>
+        <a href="./">Back to the 2D map</a>
+      </div>
+    </div>
+    <script type="module" src="/src/visit/main.js"></script>
+  </body>
+</html>
