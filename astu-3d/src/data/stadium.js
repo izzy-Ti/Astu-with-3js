@@ -3,7 +3,7 @@
 // mapped into full.jpg map units. Pitch measured on the image: 630 x 400 px = 105 x 68 m
 // -> 0.1667 m per image px.
 
-const S = 0.12, OX = 682.2, OY = 398.8 // stadium.png px -> full.jpg px
+const S = 0.12, OX = 659.2, OY = 398.1 // stadium.png px -> full.jpg px
 export const SPORTS_MPU = 0.1667 / S    // ≈ 1.39 m per map unit (stadium-derived scale)
 
 const P = ([x, y]) => [+(OX + x * S).toFixed(2), +(OY + y * S).toFixed(2)]
