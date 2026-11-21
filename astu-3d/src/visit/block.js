@@ -72,8 +72,7 @@ export function galleryBlock(B, o) {
     for (let i = 0; i < nb; i++) {
       const x0 = i * bw, xc = x0 + bw / 2
       // gallery side: clerestory ribbon tucked under the beams, tall doors with glazed transoms
-      const isBehindStair = front.some((f) => Math.abs(xc - f.x) < 2.2)
-      const door = !isBehindStair && (i % 3 === 1 || (k === 0 && i % 4 === 3))
+      const door = i % 3 === 1 || (k === 0 && i % 4 === 3)
       if (door) {
         const dw = 1.32, dh = 2.85, dx = x0 + 0.85
         // 3D door frame
@@ -139,7 +138,11 @@ export function galleryBlock(B, o) {
     // parapet segments, opened where a front stair landing joins the corridor
     let segs = [[pa, pb]]
     if (k < F) for (const f of front) {
-      const o0 = f.x - FLAND / 2, o1 = f.x + FLAND / 2
+      const xl = f.xl !== undefined ? f.xl : f.x
+      const dx = f.dx !== undefined ? f.dx : 1
+      const lW = 1.8
+      const farX = xl - dx * lW
+      const o0 = Math.min(xl, farX) - 0.08, o1 = Math.max(xl, farX) + 0.08
       segs = segs.flatMap(([a, b]) => (o1 <= a || o0 >= b ? [[a, b]] : [[a, o0], [o1, b]].filter(([u, v]) => v - u > 0.05)))
     }
     for (const [a, b] of segs) {
@@ -183,7 +186,32 @@ export function galleryBlock(B, o) {
 
   // ---------------------------------------------------------------- ends
   const sinks = []
-  for (const f of front) { frontStair(B, { ...f, F, FH, P, G, lvl }); sinks.push(f.x - 2.2) }
+  for (const f of front) {
+    frontStair(B, { ...f, F, FH, P, G, lvl })
+    const xl = f.xl !== undefined ? f.xl : f.x
+    const dx = f.dx !== undefined ? f.dx : 1
+    const lW = 1.8
+    const farX = xl - dx * lW // far outer boundary of stair landing
+
+    // Classroom timber door with chevron battens next to stair
+    const doorX = farX - dx * 0.95
+    B.frame(doorX, P + 1.05, 0.02, 0, () => B.add('door', quad(1.0, 2.1)))
+    B.frame(doorX, P + 2.45, 0.02, 0, () => B.add('window', quad(1.0, 0.6)))
+    B.frame(doorX, P + 2.82, 0.025, 0, () => B.add('plate', quad(0.35, 0.22)))
+
+    // Sinks position next to door
+    const sinkX = farX - dx * 2.5
+    sinks.push(sinkX)
+
+    // Raised concrete inspection manhole cover in front of washbasins
+    const mz = G + 0.85
+    B.add('concrete', box(sinkX - 0.45, 0, mz - 0.45, sinkX + 0.45, 0.18, mz + 0.45), { collide: true })
+    B.add('fixtureSlot', box(sinkX - 0.38, 0.175, mz - 0.38, sinkX + 0.38, 0.185, mz + 0.38))
+
+    // CEEC informational poster board mounted on wall (photo feat1_base.jpg)
+    const px = farX - dx * 4.6
+    B.frame(px, P + 1.25, 0.025, 0, () => B.add('poster', quad(1.9, 1.33)))
+  }
   for (const [which, kind] of [['start', start], ['end', end]]) {
     const x0 = which === 'start' ? 0 : len, out = which === 'start' ? -1 : 1
     if (kind === 'round') roundEnd(B, { x0, out, F, lvl, G })
@@ -197,10 +225,13 @@ export function galleryBlock(B, o) {
       sinks.push(x0 - out * (RUN + 1.2))
     }
   }
-  // twin pedestal wash-basins on the ground-floor walkway next to the stair (photo 145456)
+  // twin pedestal ceramic wash-basins on the ground floor next to stair (photos 145456, fix.jpg)
   for (const sx of sinks) for (const dx of [-0.35, 0.35]) {
-    B.add('ceramic', new THREE.CylinderGeometry(0.08, 0.12, 0.75, 10).translate(sx + dx, P + 0.375, 0.35))
-    B.add('ceramic', box(sx + dx - 0.25, P + 0.75, 0.05, sx + dx + 0.25, P + 0.9, 0.5))
+    const bx = sx + dx
+    B.add('ceramic', new THREE.CylinderGeometry(0.07, 0.11, 0.76, 12).translate(bx, P + 0.38, 0.38))
+    B.add('ceramic', box(bx - 0.26, P + 0.74, 0.06, bx + 0.26, P + 0.88, 0.52))
+    B.add('metal', new THREE.CylinderGeometry(0.015, 0.015, 0.14, 8).translate(bx, P + 0.94, 0.15))
+    B.add('fixtureSlot', box(bx - 0.03, P + 0.87, 0.28, bx + 0.03, P + 0.875, 0.34))
   }
   return { yTop: roofY + rise, levels: Array.from({ length: F }, (_, k) => lvl(k)) }
 }
@@ -280,115 +311,299 @@ function stair(B, { x0, out, F, FH, P, G, RUN, square, lvl }) {
   B.add('parapet', box(Math.min(X(RUN), X(RUN + 0.18)), yt - 0.3, half, Math.max(X(RUN), X(RUN + 0.18)), yt + 1.05, G), { collide: true })
 }
 
-// Stair tower standing in FRONT of the gallery (stare.png, photos 145456, 145430, 145543):
-// The signature curved semicircular half-landing drum projects OUTWARD in FRONT (+z) facing the walkway.
-// Flights connect the corridor opening to the curved front landing; central spine bears the building sign.
-function frontStair(B, { x, dir = -1, sign = 'B 508', F, FH, P, G, lvl }) {
-  const xc = x
-  const zc = G + 1.55 // center of curved landing drum along Z (in front of corridor)
-  const R = 1.55 // radius of curved landing drum projecting forward
-  const nSteps = 10, T = 0.22
-  const flightW = 1.30 // lane width
-  const x0 = xc - flightW - 0.25, x1 = xc + flightW + 0.25
+// Stair tower standing in FRONT of the gallery, strictly and faithfully matching fix.jpg (20261109_145502.jpg):
+// Architectural anatomy:
+//  - Two flights side by side along X:
+//      * Flight 1 (inner): climbs along X from corridor landing (xl) to curved drum (xd) at half-floor height
+//      * Flight 2 (outer): climbs along X from curved drum (xd) to upper corridor landing (xl) at next floor height
+//  - Cantilevered curved drums on every floor projecting forward (+Z) into the walkway:
+//      * Pure front-curving semicircular balcony (radius R)
+//      * Solid roughcast parapet wall (1.05m high) with coping arris
+//      * White plastered cantilever soffit slab with tapered structural support bracket
+//      * Drainage pipe hole stub protruding from the curved wall
+//      * Vertical blue enamel sign plaque ('B 508' / 'B 509') on second drum
+//  - Outer inclined solid roughcast parapet wall on Flight 2:
+//      * Closes off the steps from the walkway side (no naked floating steps!)
+//      * Connects smoothly from drum parapet up to corridor parapet with S-curve transition
+//  - Center divider balustrade between inner and outer flights with wood handrail
+//  - Ground level:
+//      * Massive vertical concrete blade pier under Drum 1 with dark grey painted dado
+//      * Stepped concrete plinth and entrance steps
+//      * Fully open ground-floor corridor passageway behind the stair
+//  - Undersides: white plastered soffits with surface-mounted industrial fluorescent tube strip lights
+//  - Roof canopy: cantilevered curved slab capping the stair tower with rectangular skylight hatch
+//  - BVH collision ramps spanning all flights and landings for butter-smooth player climbing
+function frontStair(B, { xl, xd, dx = 1, sign = 'B 508', F, FH, P, G, lvl }) {
+  if (xl === undefined || xd === undefined) {
+    const x0 = xl !== undefined ? xl : xd
+    xl = x0
+    xd = x0 + dx * 4.8
+  }
+  const Lf = Math.abs(xd - xl)
+  const xMin = Math.min(xl, xd), xMax = Math.max(xl, xd)
+  const lW = 1.8 // landing width along X
+  const lx0 = dx > 0 ? xl - lW : xl + lW
+  const landMinX = Math.min(xl, lx0), landMaxX = Math.max(xl, lx0)
 
-  // Semicircular landing disc in plan (curving toward +z into the walkway)
-  const semiPts = arcPts(xc, zc, R, 0, Math.PI, 24)
-  const drumDisc = semiPts.concat([[xc - R, zc], [xc + R, zc]])
+  const R = 1.85 // drum radius
+  const cz = G + 0.45
+  const zApex = cz + R // furthest forward projection into walkway (~4.90m)
+  const zOuter = zApex // outer edge of outer flight matches drum apex
+  const zMid = G + 1.05 // divider centerline between inner and outer lanes
+  const zInnerA = G - 0.15, zInnerB = zMid - 0.08
+  const zOuterA = zMid + 0.08, zOuterB = zOuter - 0.20
+  const nSteps = 11, Twaist = 0.18
 
-  // Ground flight steps up from the walkway (+Z) onto the ground landing:
-  B.add('stairs', box(xc - 1.1, 0, zc + R, xc + 1.1, P * 0.5, zc + R + 0.35))
+  // Drum arc points:
+  // Center is at (xd, cz). Radius R = 1.85.
+  // Apex is at (xd, cz + R) = (xd, zOuter) where th = Math.PI / 2.
+  // Sweep continuous convex arc from apex to the corridor boundary Z = G:
+  const nArc = 24
+  const drumArc = []
+  const thEnd = Math.asin((G - cz) / R) // ~ -0.2458 rad (-14.08 deg)
+  const thStart = Math.PI / 2
+  if (dx > 0) {
+    for (let i = 0; i <= nArc; i++) {
+      const th = thStart - (i / nArc) * (thStart - thEnd)
+      drumArc.push([xd + R * Math.cos(th), cz + R * Math.sin(th)])
+    }
+  } else {
+    const thTarget = Math.PI - thEnd
+    for (let i = 0; i <= nArc; i++) {
+      const th = thStart + (i / nArc) * (thTarget - thStart)
+      drumArc.push([xd + R * Math.cos(th), cz + R * Math.sin(th)])
+    }
+  }
+  const xArcEnd = drumArc[drumArc.length - 1][0]
+
+  // Full closed drum floor polygon:
+  // [xd, G] -> [xd, zOuter] -> ...drumArc -> [xArcEnd, G] -> closed along Z = G
+  const drumFloorPts = [
+    [xd, G],
+    ...drumArc,
+  ]
+
+  // Under lowest drum (ground level): massive vertical concrete blade pier (feat1_base.jpg)
+  const pierW = 0.40, pierZ0 = G + 0.35, pierZ1 = G + 1.65
+  const pierYTop = lvl(0) + FH / 2 - 0.30
+  B.add('render', box(xd - pierW / 2, 0, pierZ0, xd + pierW / 2, pierYTop, pierZ1), { collide: true })
+  B.add('dado', box(xd - pierW / 2 - 0.01, 0, pierZ0 - 0.01, xd + pierW / 2 + 0.01, P + 0.70, pierZ1 + 0.01))
+  B.add('trim', box(xd - pierW / 2 - 0.04, pierYTop - 0.06, pierZ0 - 0.04, xd + pierW / 2 + 0.04, pierYTop, pierZ1 + 0.04))
+
+  // Ground level stepped concrete plinth under the drum and stair entrance
+  const plinthPts1 = drumArc.map(([px, pz]) => [px + (dx > 0 ? 0.35 : -0.35), pz + 0.35])
+  plinthPts1.unshift([xl, zOuter + 0.35])
+  plinthPts1.unshift([landMinX - 0.30, zOuter + 0.35])
+  plinthPts1.unshift([landMinX - 0.30, G])
+  plinthPts1.push([xArcEnd + (dx > 0 ? 0.35 : -0.35), G])
+  B.add('concrete', prism(plinthPts1, 0, 0.16), { collide: true })
+
+  const plinthPts2 = drumArc.map(([px, pz]) => [px + (dx > 0 ? 0.15 : -0.15), pz + 0.15])
+  plinthPts2.unshift([xl, zOuter + 0.15])
+  plinthPts2.unshift([landMinX - 0.15, zOuter + 0.15])
+  plinthPts2.unshift([landMinX - 0.15, G])
+  plinthPts2.push([xArcEnd + (dx > 0 ? 0.15 : -0.15), G])
+  B.add('concrete', prism(plinthPts2, 0.16, P), { collide: true })
+
+  // Ground entrance floor & steps into corridor
+  B.add('corridorTile', box(landMinX - 0.2, P - 0.02, G - 0.15, xMax + 0.8, P, zOuter))
+  B.add('stairs', box(landMinX, 0, zOuter - 0.2, xl, P * 0.5, zOuter + 0.35))
   B.collider(hexa(
-    [[xc - 1.1, 0, zc + R + 0.9], [xc + 1.1, 0, zc + R + 0.9], [xc + 1.1, 0, zc + R], [xc - 1.1, 0, zc + R]],
-    [[xc - 1.1, 0.02, zc + R + 0.9], [xc + 1.1, 0.02, zc + R + 0.9], [xc + 1.1, P, zc + R], [xc - 1.1, P, zc + R]]
+    [[landMinX, 0, zOuter + 0.8], [xl, 0, zOuter + 0.8], [xl, 0, zOuter], [landMinX, 0, zOuter]],
+    [[landMinX, 0.02, zOuter + 0.8], [xl, 0.02, zOuter + 0.8], [xl, P, zOuter], [landMinX, P, zOuter]]
   ))
 
-  // Under lowest drum (ground level): massive vertical concrete support pier (photo 145456)
-  B.add('render', box(xc - 0.45, 0, zc - 0.2, xc + 0.45, lvl(0) + FH / 2 - 0.35, zc + 0.45), { collide: true })
-
-  // Stair tower vertical sign plaque (photo 145543): blue enamel plaque with "B 508" or "B 509"
-  const signKey = sign.includes('508') ? 'towerSign508' : sign.includes('509') ? 'towerSign509' : 'towerSign510'
-  B.frame(xc, lvl(0) + FH / 2 + 0.4, zc + R + 0.03, 0, () => B.add(signKey, quad(0.52, 0.95)))
+  // Red fire bucket sitting on ground landing
+  B.add('bucketRed', new THREE.CylinderGeometry(0.12, 0.09, 0.28, 8).translate(xl - (dx > 0 ? 0.6 : -0.6), P + 0.14, G + 0.45))
 
   for (let k = 0; k < F; k++) {
     const y = lvl(k), ym = y + FH / 2, y2 = lvl(k + 1)
 
-    // 1. Floor landing extending out from corridor opening (from z = G - 0.2 to z = G + 0.55)
-    B.add('concrete', box(x0, k === 0 ? 0 : y - 0.28, G - 0.2, x1, y, G + 0.55), { collide: true })
-    B.add('corridorTile', box(x0, y - 0.02, G - 0.15, x1, y, G + 0.55))
-    // Side parapets closing the floor landing sides
+    // --------------------------------------------------------
+    // 1. CORRIDOR FLOOR LANDING AT xl
+    // --------------------------------------------------------
+    // Landing slab
+    B.add('concrete', box(landMinX, k === 0 ? 0 : y - 0.28, G - 0.20, landMaxX, y, zOuter), { collide: true })
+    B.add('corridorTile', box(landMinX + 0.02, y - 0.02, G - 0.18, landMaxX - 0.02, y, zOuter - 0.18))
+
+    // Landing ceiling soffit & strip light fixture
     if (k > 0) {
-      B.add('parapet', box(x0 - 0.18, y - 0.45, G, x0, y + 1.05, G + 0.55), { collide: true })
-      B.add('parapet', box(x1, y - 0.45, G, x1 + 0.18, y + 1.05, G + 0.55), { collide: true })
+      B.add('trim', box(landMinX, y - 0.30, G - 0.18, landMaxX, y - 0.28, zOuter - 0.18))
+      const lMidX = (landMinX + landMaxX) / 2
+      B.add('fixture', box(lMidX - 0.5, y - 0.34, (zOuterA + zOuterB) / 2 - 0.09, lMidX + 0.5, y - 0.29, (zOuterA + zOuterB) / 2 + 0.09))
+      B.add('fixtureSlot', box(lMidX - 0.42, y - 0.345, (zOuterA + zOuterB) / 2 - 0.035, lMidX + 0.42, y - 0.34, (zOuterA + zOuterB) / 2 + 0.035))
+    }
+
+    // Landing parapets (for upper floors):
+    // 1. Far cheek parapet at lx0 (opposite the stair flights, closing off the side):
+    if (k > 0) {
+      const farX0 = dx > 0 ? landMinX : landMaxX - 0.20, farX1 = dx > 0 ? landMinX + 0.20 : landMaxX
+      B.add('parapet', box(farX0, y - 0.45, G, farX1, y + 1.05, zOuter), { collide: true })
+      B.add('parapet', box(farX0 - 0.04, y + 0.97, G, farX1 + 0.04, y + 1.05, zOuter + 0.05))
+      // 2. Front parapet along Z = zOuter protecting the landing:
+      B.add('parapet', box(landMinX, y - 0.45, zOuter - 0.22, landMaxX, y + 1.05, zOuter), { collide: true })
+      B.add('parapet', box(landMinX - 0.04, y + 0.97, zOuter - 0.26, landMaxX + 0.04, y + 1.05, zOuter + 0.05))
     }
 
     if (k === F - 1) {
       // Top floor: close outer edge with parapet
-      B.add('parapet', box(x0, y - 0.45, G + 0.40, x1, y + 1.05, G + 0.55), { collide: true })
+      B.add('parapet', box(xMin, y - 0.45, zOuter - 0.20, xMax, y + 1.05, zOuter), { collide: true })
+      B.add('parapet', box(xMin - 0.05, y + 0.97, zOuter - 0.25, xMax + 0.05, y + 1.05, zOuter + 0.05))
       break
     }
 
-    // 2. The Curved Half-Landing Drum at height ym (projecting forward to +Z)
-    B.add('concrete', prism(drumDisc, ym - 0.35, ym), { collide: true })
-    B.add('corridorTile', prism(drumDisc, ym - 0.02, ym))
-    // Tall curved parapet wall on the front (+z) of the drum
-    B.add('parapet', wallPath(arcPts(xc, zc, R - 0.08, 0, Math.PI, 24), 0.22, ym - 0.6, ym + 1.05), { collide: true })
-    B.add('parapet', wallPath(arcPts(xc, zc, R - 0.05, 0, Math.PI, 24), 0.30, ym + 0.98, ym + 1.07))
-    // White-painted fascia/trim along the curved underside
-    B.add('trim', prism(semiPts.concat([[xc - R, zc], [xc + R, zc]]), ym - 0.42, ym - 0.35))
+    // --------------------------------------------------------
+    // 2. CANTILEVERED CURVED DRUM LANDING AT ym (Photos fix.jpg, feat2, feat4)
+    // --------------------------------------------------------
+    // Semicircular landing floor slab & tile
+    B.add('concrete', prism(drumFloorPts, ym - 0.28, ym), { collide: true })
+    B.add('corridorTile', prism(drumFloorPts, ym - 0.02, ym))
+    // White plastered cantilever soffit with chamfer
+    B.add('trim', prism(drumFloorPts, ym - 0.35, ym - 0.28))
+    // Structural cantilever support bracket under drum (photo feat4_upper_drums.jpg)
+    const brkX0 = xd - 0.22, brkX1 = xd + 0.22
+    B.add('trim', hexa(
+      [[brkX0, ym - 0.85, G], [brkX1, ym - 0.85, G], [brkX1, ym - 0.35, cz + R * 0.7], [brkX0, ym - 0.35, cz + R * 0.7]],
+      [[brkX0, ym - 0.35, G], [brkX1, ym - 0.35, G], [brkX1, ym - 0.35, cz + R * 0.7], [brkX0, ym - 0.35, cz + R * 0.7]]
+    ))
 
-    // 3. Central structural spine/wall between the two flights
-    B.add('render', box(xc - 0.12, ym - 0.35, G + 0.45, xc + 0.12, y2 + 1.0, zc), { collide: true })
+    // Solid roughcast curved parapet wall along drumArc (completely convex and continuous):
+    B.add('parapet', wallPath(drumArc, 0.22, ym - 0.50, ym + 1.05), { collide: true })
+    // Smooth capping arris on top of drum parapet
+    B.add('parapet', wallPath(drumArc, 0.30, ym + 0.97, ym + 1.06))
+    // Drainage pipe stub protruding from curved wall (photo feat2_drum1.jpg)
+    const spoutTh = dx > 0 ? Math.PI / 2 - 0.3 : Math.PI / 2 + 0.3
+    const spoutX = xd + (R + 0.05) * Math.cos(spoutTh), spoutZ = cz + (R + 0.05) * Math.sin(spoutTh)
+    B.add('metal', new THREE.CylinderGeometry(0.025, 0.025, 0.20, 8).rotateX(Math.PI / 2).translate(spoutX, ym + 0.35, spoutZ))
 
-    // 4. Flight A (right lane, x in [xc + 0.12, xc + 0.12 + flightW]):
-    // Runs from z = G + 0.45 to z = zc, climbing from y to ym
-    const xa0 = xc + 0.12, xa1 = xa0 + flightW
-    const za0 = G + 0.45, za1 = zc
-    const riseA = (ym - y) / nSteps, runA = (za1 - za0) / nSteps
-    for (let i = 0; i < nSteps; i++) {
-      const zStep0 = za0 + runA * i, zStep1 = za0 + runA * (i + 1)
-      const yStep0 = y + riseA * i, yStep1 = y + riseA * (i + 1)
-      B.add('stairs', box(xa0, yStep0 - 0.02, zStep0, xa1, yStep1, zStep1))
-      B.add('corridorTile', box(xa0 + 0.02, yStep1 - 0.02, zStep0, xa1 - 0.02, yStep1, zStep1))
+    // Vertical blue enamel building sign plaque on Drum 2 (Level 2, photo feat4_upper_drums.jpg)
+    if (k === 1) {
+      const signKey = sign.includes('508') ? 'towerSign508' : sign.includes('509') ? 'towerSign509' : 'towerSign510'
+      const signTh = dx > 0 ? Math.PI / 2 - 0.15 : Math.PI / 2 + 0.15
+      const signPx = xd + (R + 0.16) * Math.cos(signTh), signPz = cz + (R + 0.16) * Math.sin(signTh)
+      B.frame(signPx, ym + 0.45, signPz, dx > 0 ? -0.15 : 0.15, () => B.add(signKey, quad(0.60, 1.15)))
     }
-    // Under-flight concrete soffit slab
+
+    // --------------------------------------------------------
+    // 3. FLIGHT 1 (INNER FLIGHT, climbing along X from xl to xd):
+    // --------------------------------------------------------
+    const rise1 = (ym - y) / nSteps, run1 = (xd - xl) / nSteps
+
+    // Solid reinforced concrete waist slab under Flight 1:
     B.add('concrete', hexa(
-      [[xa0, y - T - 0.05, za0], [xa1, y - T - 0.05, za0], [xa1, ym - T - riseA, za1], [xa0, ym - T - riseA, za1]],
-      [[xa0, y - 0.05, za0], [xa1, y - 0.05, za0], [xa1, ym - riseA, za1], [xa0, ym - riseA, za1]]
-    ))
-    B.collider(hexa(
-      [[xa0, y - 0.2, za0], [xa1, y - 0.2, za0], [xa1, ym - 0.2, za1], [xa0, ym - 0.2, za1]],
-      [[xa0, y, za0], [xa1, y, za0], [xa1, ym, za1], [xa0, ym, za1]]
-    ))
-    // Outer sloping parapet on Flight A
-    B.add('parapet', hexa(
-      [[xa1, y - 0.45, za0], [xa1 + 0.18, y - 0.45, za0], [xa1 + 0.18, ym - 0.45, za1], [xa1, ym - 0.45, za1]],
-      [[xa1, y + 1.05, za0], [xa1 + 0.18, y + 1.05, za0], [xa1 + 0.18, ym + 1.05, za1], [xa1, ym + 1.05, za1]]
+      [[xl, y - Twaist, zInnerA], [xd, ym - rise1 - Twaist, zInnerA], [xd, ym - rise1 - Twaist, zInnerB], [xl, y - Twaist, zInnerB]],
+      [[xl, y, zInnerA], [xd, ym - rise1, zInnerA], [xd, ym - rise1, zInnerB], [xl, y, zInnerB]]
     ), { collide: true })
 
-    // 5. Flight B (left lane, x in [xc - 0.12 - flightW, xc - 0.12]):
-    // Runs from z = zc back to z = G + 0.45, climbing from ym to y2
-    const xb0 = xc - 0.12 - flightW, xb1 = xc - 0.12
-    const zb0 = zc, zb1 = G + 0.45
-    const riseB = (y2 - ym) / nSteps, runB = (zb1 - zb0) / nSteps
+    // Plastered trim soffit under Flight 1:
+    B.add('trim', hexa(
+      [[xl, y - Twaist - 0.04, zInnerA], [xd, ym - rise1 - Twaist - 0.04, zInnerA], [xd, ym - rise1 - Twaist - 0.04, zInnerB], [xl, y - Twaist - 0.04, zInnerB]],
+      [[xl, y - Twaist, zInnerA], [xd, ym - rise1 - Twaist, zInnerA], [xd, ym - rise1 - Twaist, zInnerB], [xl, y - Twaist, zInnerB]]
+    ))
+
+    // Solid concrete step treads embedded into the waist slab (zero floating gap):
     for (let i = 0; i < nSteps; i++) {
-      const zStep0 = zb0 + runB * i, zStep1 = zb0 + runB * (i + 1)
-      const yStep0 = ym + riseB * i, yStep1 = ym + riseB * (i + 1)
-      B.add('stairs', box(xb0, yStep0 - 0.02, Math.min(zStep0, zStep1), xb1, yStep1, Math.max(zStep0, zStep1)))
-      B.add('corridorTile', box(xb0 + 0.02, yStep1 - 0.02, Math.min(zStep0, zStep1), xb1 - 0.02, yStep1, Math.max(zStep0, zStep1)))
+      const sX0 = xl + run1 * i, sX1 = xl + run1 * (i + 1)
+      const sY0 = y + rise1 * i, sY1 = y + rise1 * (i + 1)
+      const minX = Math.min(sX0, sX1), maxX = Math.max(sX0, sX1)
+      B.add('stairs', box(minX, sY0 - 0.04, zInnerA, maxX, sY1, zInnerB))
+      B.add('corridorTile', box(minX + 0.01, sY1 - 0.025, zInnerA + 0.015, maxX - 0.01, sY1, zInnerB - 0.015))
     }
-    // Under-flight concrete soffit slab
+
+    // Inner stringer curb along corridor side (zInnerA) to close off flight:
+    const stringerW = 0.12
     B.add('concrete', hexa(
-      [[xb0, ym - T - 0.05, zb0], [xb1, ym - T - 0.05, zb0], [xb1, y2 - T - riseB, zb1], [xb0, y2 - T - riseB, zb1]],
-      [[xb0, ym - 0.05, zb0], [xb1, ym - 0.05, zb0], [xb1, y2 - riseB, zb1], [xb0, y2 - riseB, zb1]]
-    ))
-    B.collider(hexa(
-      [[xb0, ym - 0.2, zb0], [xb1, ym - 0.2, zb0], [xb1, y2 - 0.2, zb1], [xb0, y2 - 0.2, zb1]],
-      [[xb0, ym, zb0], [xb1, ym, zb0], [xb1, y2, zb1], [xb0, y2, zb1]]
-    ))
-    // Outer sloping parapet on Flight B
-    B.add('parapet', hexa(
-      [[xb0 - 0.18, ym - 0.45, zb0], [xb0, ym - 0.45, zb0], [xb0, y2 - 0.45, zb1], [xb0 - 0.18, y2 - 0.45, zb1]],
-      [[xb0 - 0.18, ym + 1.05, zb0], [xb0, ym + 1.05, zb0], [xb0, y2 + 1.05, zb1], [xb0 - 0.18, y2 + 1.05, zb1]]
+      [[xl, y - Twaist, zInnerA - stringerW], [xd, ym - rise1 - Twaist, zInnerA - stringerW], [xd, ym - rise1 - Twaist, zInnerA], [xl, y - Twaist, zInnerA]],
+      [[xl, y + 0.18, zInnerA - stringerW], [xd, ym - rise1 + 0.18, zInnerA - stringerW], [xd, ym - rise1 + 0.18, zInnerA], [xl, y + 0.18, zInnerA]]
     ), { collide: true })
+
+    // BVH collision ramp for Flight 1:
+    B.collider(hexa(
+      [[xl, y - 0.20, zInnerA], [xd, ym - 0.20, zInnerA], [xd, ym - 0.20, zInnerB], [xl, y - 0.20, zInnerB]],
+      [[xl, y, zInnerA], [xd, ym, zInnerA], [xd, ym, zInnerB], [xl, y, zInnerB]]
+    ))
+
+    // Industrial fluorescent strip light fixture on angled soffit of Flight 1 (photo feat3_flight1.jpg)
+    const midX1 = (xl + xd) / 2, midY1 = (y + ym) / 2 - Twaist - 0.12, midZ1 = (zInnerA + zInnerB) / 2
+    B.add('fixture', box(midX1 - 0.55, midY1 - 0.04, midZ1 - 0.09, midX1 + 0.55, midY1 + 0.04, midZ1 + 0.09))
+    B.add('fixtureSlot', box(midX1 - 0.46, midY1 - 0.05, midZ1 - 0.035, midX1 + 0.46, midY1 - 0.035, midZ1 + 0.035))
+
+    // Center divider balustrade wall between Flight 1 and Flight 2:
+    B.add('parapet', hexa(
+      [[xl, y - 0.15, zInnerB], [xd, ym - 0.15, zInnerB], [xd, ym - 0.15, zOuterA], [xl, y - 0.15, zOuterA]],
+      [[xl, y + 0.92, zInnerB], [xd, ym + 0.92, zInnerB], [xd, ym + 0.92, zOuterA], [xl, y + 0.92, zOuterA]]
+    ), { collide: true })
+    // Hardwood handrail on divider:
+    B.add('wood', hexa(
+      [[xl, y + 0.90, zInnerB - 0.02], [xd, ym + 0.90, zInnerB - 0.02], [xd, ym + 0.90, zOuterA + 0.02], [xl, y + 0.90, zOuterA + 0.02]],
+      [[xl, y + 0.96, zInnerB - 0.02], [xd, ym + 0.96, zInnerB - 0.02], [xd, ym + 0.96, zOuterA + 0.02], [xl, y + 0.96, zOuterA + 0.02]]
+    ))
+
+    // --------------------------------------------------------
+    // 4. FLIGHT 2 (OUTER FLIGHT, climbing along X from xd to xl):
+    // --------------------------------------------------------
+    const rise2 = (y2 - ym) / nSteps, run2 = (xl - xd) / nSteps
+
+    // Solid reinforced concrete waist slab under Flight 2:
+    B.add('concrete', hexa(
+      [[xd, ym - Twaist, zOuterA], [xl, y2 - rise2 - Twaist, zOuterA], [xl, y2 - rise2 - Twaist, zOuterB], [xd, ym - Twaist, zOuterB]],
+      [[xd, ym, zOuterA], [xl, y2 - rise2, zOuterA], [xl, y2 - rise2, zOuterB], [xd, ym, zOuterB]]
+    ), { collide: true })
+
+    // Plastered trim soffit under Flight 2:
+    B.add('trim', hexa(
+      [[xd, ym - Twaist - 0.04, zOuterA], [xl, y2 - rise2 - Twaist - 0.04, zOuterA], [xl, y2 - rise2 - Twaist - 0.04, zOuterB], [xd, ym - Twaist - 0.04, zOuterB]],
+      [[xd, ym - Twaist, zOuterA], [xl, y2 - rise2, zOuterA], [xl, y2 - rise2, zOuterB], [xd, ym - Twaist, zOuterB]]
+    ))
+
+    // Solid concrete step treads embedded into the waist slab (zero floating gap):
+    for (let i = 0; i < nSteps; i++) {
+      const sX0 = xd + run2 * i, sX1 = xd + run2 * (i + 1)
+      const sY0 = ym + rise2 * i, sY1 = ym + rise2 * (i + 1)
+      const minX = Math.min(sX0, sX1), maxX = Math.max(sX0, sX1)
+      B.add('stairs', box(minX, sY0 - 0.04, zOuterA, maxX, sY1, zOuterB))
+      B.add('corridorTile', box(minX + 0.01, sY1 - 0.025, zOuterA + 0.015, maxX - 0.01, sY1, zOuterB - 0.015))
+    }
+
+    // BVH collision ramp for Flight 2:
+    B.collider(hexa(
+      [[xd, ym - 0.20, zOuterA], [xl, y2 - 0.20, zOuterA], [xl, y2 - 0.20, zOuterB], [xd, ym - 0.20, zOuterB]],
+      [[xd, ym, zOuterA], [xl, y2, zOuterA], [xl, y2, zOuterB], [xd, ym, zOuterB]]
+    ))
+
+    // Industrial fluorescent strip light fixture on angled soffit of Flight 2
+    const midX2 = (xd + xl) / 2, midY2 = (ym + y2) / 2 - Twaist - 0.12, midZ2 = (zOuterA + zOuterB) / 2
+    B.add('fixture', box(midX2 - 0.55, midY2 - 0.04, midZ2 - 0.09, midX2 + 0.55, midY2 + 0.04, midZ2 + 0.09))
+    B.add('fixtureSlot', box(midX2 - 0.46, midY2 - 0.05, midZ2 - 0.035, midX2 + 0.46, midY2 - 0.035, midZ2 + 0.035))
+
+    // --------------------------------------------------------
+    // 5. SOLID INCLINED PARAPET ON FLIGHT 2 FACING WALKWAY (Photos fix.jpg, feat1, feat3)
+    // --------------------------------------------------------
+    // Hides the steps completely from the walkway!
+    // Connects seamlessly from the drum apex (xd, ym) up to the corridor landing (xl, y2):
+    const pZ0 = zOuter - 0.22, pZ1 = zOuter
+    B.add('parapet', hexa(
+      [[xd, ym - 0.50, pZ0], [xd, ym - 0.50, pZ1], [xl, y2 - 0.50, pZ1], [xl, y2 - 0.50, pZ0]],
+      [[xd, ym + 1.05, pZ0], [xd, ym + 1.05, pZ1], [xl, y2 + 1.05, pZ1], [xl, y2 + 1.05, pZ0]]
+    ), { collide: true })
+    // Smooth capping arris along inclined parapet top:
+    B.add('parapet', hexa(
+      [[xd, ym + 0.97, pZ0 - 0.04], [xd, ym + 0.97, pZ1 + 0.04], [xl, y2 + 0.97, pZ1 + 0.04], [xl, y2 + 0.97, pZ0 - 0.04]],
+      [[xd, ym + 1.06, pZ0 - 0.04], [xd, ym + 1.06, pZ1 + 0.04], [xl, y2 + 1.06, pZ1 + 0.04], [xl, y2 + 1.06, pZ0 - 0.04]]
+    ))
+
   }
+
+  // --------------------------------------------------------
+  // 6. ROOF CANOPY AT TOP OF STAIR TOWER (Photo feat4_upper_drums.jpg)
+  // --------------------------------------------------------
+  const yRoof = lvl(F)
+  B.add('concrete', prism(drumFloorPts, yRoof, yRoof + 0.25), { collide: true })
+  B.add('trim', prism(drumFloorPts, yRoof - 0.08, yRoof)) // white painted soffit
+  // Curved roof parapet rim
+  B.add('parapet', wallPath(drumArc, 0.22, yRoof, yRoof + 0.40))
+  // Skylight opening / vent hatch in roof canopy
+  const hx = xd + (dx > 0 ? 0.3 : -0.3), hz = cz + 0.8
+  B.add('fixtureSlot', box(hx - 0.40, yRoof + 0.24, hz - 0.30, hx + 0.40, yRoof + 0.26, hz + 0.30))
 }
+
