@@ -63,6 +63,13 @@ const materials = {
   fixture: mat({ color: 0xdedbd0, roughness: 0.5, noShadow: true }),
   fixtureSlot: mat({ color: 0x8f9290, emissive: 0xfff6e0, emissiveIntensity: 0, noShadow: true }),
   ceramic: mat({ color: 0xf2f2ee, roughness: 0.25 }),
+  corridorTile: mat({ tex: T.corridorTileTex(), rep: 1 / 2, roughness: 0.85 }),
+  towerSign508: mat({ tex: T.towerSignTex('B 508'), roughness: 0.4, noShadow: true }),
+  towerSign509: mat({ tex: T.towerSignTex('B 509'), roughness: 0.4, noShadow: true }),
+  towerSign510: mat({ tex: T.towerSignTex('B 510'), roughness: 0.4, noShadow: true }),
+  windowGrille: mat({ tex: T.windowGrilleTex(), roughness: 0.3, metalness: 0.4, noShadow: true }),
+  bucketRed: mat({ color: 0xcc2918, roughness: 0.5 }),
+  doorHandle: mat({ color: 0xdcd8ce, roughness: 0.25, metalness: 0.75, noShadow: true }),
   // ground
   dirt: mat({ tex: T.dirtTex(), rep: 1 / 9 }),
   grass: mat({ tex: T.grassTex(), rep: 1 / 2.5, color: 0xc4b48c }),

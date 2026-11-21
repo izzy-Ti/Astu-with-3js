@@ -15,14 +15,14 @@ import * as THREE from 'three'
 import { box, prism, prismX, wallPath, hexa, quad, arcPts } from './builder.js'
 
 const isStair = (e) => e === 'stair' || e === 'stairSquare'
-const FLAND = 1.5 // front stair: floor landing width along the façade
+const FLAND = 3.6 // front stair: floor landing width along the façade
 
 export function galleryBlock(B, o) {
   const {
     len = 44, D = 8.5, G = 2.6, F = 4, FH = 3.4, P = 0.45, bay = 3.7,
     start = 'round', end = 'stair', stone = [], style = 'bracket',
     gaps = [0.3, 0.7], posters = true, gable = [true, true], roof = true, trim = [0, 0],
-    front = [], // front-standing stair towers: [{ x: centre of the corridor connection, dir: -1|1 }]
+    front = [], // front-standing stair towers: [{ x: centre of the corridor connection, dir: -1|1, sign: 'B 508' }]
   } = o
   const lvl = (k) => P + k * FH
   const yT = lvl(F)
@@ -72,22 +72,51 @@ export function galleryBlock(B, o) {
     for (let i = 0; i < nb; i++) {
       const x0 = i * bw, xc = x0 + bw / 2
       // gallery side: clerestory ribbon tucked under the beams, tall doors with glazed transoms
-      const door = i % 3 === 1 || (k === 0 && i % 4 === 3)
+      const isBehindStair = front.some((f) => Math.abs(xc - f.x) < 2.2)
+      const door = !isBehindStair && (i % 3 === 1 || (k === 0 && i % 4 === 3))
       if (door) {
-        put('door', quad(1.3, 2.85), x0 + 0.9, y + 1.425, 0.05)
-        put('plate', quad(0.24, 0.17), x0 + 1.78, y + 1.78, 0.055)
+        const dw = 1.32, dh = 2.85, dx = x0 + 0.85
+        // 3D door frame
+        B.add('concrete', box(dx - 0.04, y, 0.01, dx, y + dh, 0.065)) // left jamb
+        B.add('concrete', box(dx + dw, y, 0.01, dx + dw + 0.04, y + dh, 0.065)) // right jamb
+        B.add('concrete', box(dx - 0.04, y + dh - 0.05, 0.01, dx + dw + 0.04, y + dh, 0.065)) // top header
+        B.add('concrete', box(dx, y + 2.10 - 0.03, 0.01, dx + dw, y + 2.10 + 0.03, 0.055)) // transom rail
+        // recessed door leaf
+        put('door', quad(dw, 2.10), dx + dw / 2, y + 1.05, 0.04)
+        // 3D metal door handle
+        B.add('doorHandle', box(dx + dw - 0.18, y + 0.96, 0.041, dx + dw - 0.14, y + 1.10, 0.046)) // escutcheon
+        B.add('doorHandle', box(dx + dw - 0.28, y + 1.02, 0.046, dx + dw - 0.16, y + 1.05, 0.07)) // lever handle
+        // transom window
+        put('window', quad(dw, dh - 2.15), dx + dw / 2, y + 2.10 + (dh - 2.10) / 2, 0.04)
+        // room plate
+        put('plate', quad(0.28, 0.18), dx + dw + 0.22, y + 1.78, 0.052)
+        // red fire/sand bucket on ground floor
+        if (k === 0) {
+          B.add('bucketRed', new THREE.CylinderGeometry(0.11, 0.08, 0.25, 8).translate(dx - 0.20, y + 0.125, 0.20))
+        }
         const ww = bw - 2.0
         win(ww, 0.85, x0 + 1.75 + ww / 2, y + 2.42, 0.05, false, i, k)
+        // window sill
+        B.add('curb', box(x0 + 1.75, y + 1.96, 0.01, x0 + 1.75 + ww, y + 2.02, 0.065))
         if (k === 0 && posters && i % 2 === 1 && ww > 1.5) put('poster', quad(1.9, 1.33), x0 + 1.75 + ww / 2, y + 1.22, 0.06)
       } else {
         const ww = bw - 0.5
         win(ww, 0.85, xc, y + 2.42, 0.05, false, i, k)
+        // window sill
+        B.add('curb', box(xc - ww / 2, y + 1.96, 0.01, xc + ww / 2, y + 2.02, 0.065))
+        if (col) {
+          // Block 510 window security iron bars (photos 145622, 145624)
+          for (let bx = xc - ww / 2 + 0.12; bx < xc + ww / 2 - 0.05; bx += 0.18) {
+            B.add('post', box(bx - 0.012, y + 2.0, 0.045, bx + 0.012, y + 2.85, 0.065))
+          }
+        }
         // some upper-floor bays have a terracotta board panel under the window (photo 113643)
         if (k > 0 && hash(i + 9, k) < 0.14) put('panel', quad(ww * 0.62, 0.42), xc - ww * 0.12, y + 1.76, 0.05)
       }
       // back side: classroom windows
       const wb = bw - 0.8
       win(wb, 1.3, xc, y + 1.85, -D - 0.03, true, i + 40, k)
+      B.add('curb', box(xc - wb / 2, y + 1.15, -D - 0.08, xc + wb / 2, y + 1.22, -D))
     }
   }
   // wall pilasters (both styles) and edge posts (column style)
@@ -104,6 +133,8 @@ export function galleryBlock(B, o) {
     const y = lvl(k), top = k === F ? y + 0.3 : y + parH
     const xa = k === F ? 0 : sz0, xb = k === F ? len : sz1
     B.add('concrete', box(xa, y - 0.25, 0, xb, y, G), { collide: true })
+    // corridor tiled floor surface
+    B.add('corridorTile', box(xa, y - 0.02, 0.02, xb, y, G - 0.18))
     const pa = Math.max(xa, trim[0]), pb = Math.min(xb, len - trim[1])
     // parapet segments, opened where a front stair landing joins the corridor
     let segs = [[pa, pb]]
@@ -133,6 +164,7 @@ export function galleryBlock(B, o) {
 
   // ---------------------------------------------------------------- ground floor walkway
   B.add('concrete', box(0, 0, 0, len, P, G), { collide: true })
+  B.add('corridorTile', box(0, P - 0.02, 0.02, len, P, G - 0.18))
   {
     const gx = gaps.map((g) => g * len)
     let x = Math.max(sz0, trim[0])
@@ -151,7 +183,7 @@ export function galleryBlock(B, o) {
 
   // ---------------------------------------------------------------- ends
   const sinks = []
-  for (const f of front) { frontStair(B, { ...f, F, FH, P, G, lvl }); sinks.push(f.x - f.dir * 1.8) }
+  for (const f of front) { frontStair(B, { ...f, F, FH, P, G, lvl }); sinks.push(f.x - 2.2) }
   for (const [which, kind] of [['start', start], ['end', end]]) {
     const x0 = which === 'start' ? 0 : len, out = which === 'start' ? -1 : 1
     if (kind === 'round') roundEnd(B, { x0, out, F, lvl, G })
@@ -248,68 +280,115 @@ function stair(B, { x0, out, F, FH, P, G, RUN, square, lvl }) {
   B.add('parapet', box(Math.min(X(RUN), X(RUN + 0.18)), yt - 0.3, half, Math.max(X(RUN), X(RUN + 0.18)), yt + 1.05, G), { collide: true })
 }
 
-// Stair tower standing in FRONT of the gallery (stare.png, photos 145456 / 145430 / 145543):
-// a floor landing joins each corridor through an opening in its parapet; flight A (inner lane,
-// against the corridor) climbs sideways along the façade to a semicircular half-landing that
-// bulges out at the far side; flight B (outer lane) climbs back to the next floor's landing.
-function frontStair(B, { x, dir = -1, F, FH, P, G, lvl }) {
-  const RUN = 3.8, LW = 1.3 // flight run along the façade, lane width
-  const zi0 = G + 0.04, zi1 = G + LW, zo0 = G + LW + 0.12, zo1 = G + 2 * LW + 0.12, zOut = zo1 + 0.18
-  const xa = x + dir * FLAND / 2 // edge of the floor landing where the flights start
-  const xl = xa + dir * RUN // far end of the flights (half-landing side)
-  const L0 = Math.min(x - FLAND / 2, x + FLAND / 2), L1 = Math.max(x - FLAND / 2, x + FLAND / 2)
-  const xBack = x - dir * FLAND / 2 // landing edge away from the flights
-  const nSteps = 11, T = 0.2
-  const zc = (zi0 + zo1) / 2, R = (zo1 - zi0) / 2 + 0.06
-  const RB = R + 0.35 // the round landing bulges wider than the flights (photos 145456, 145543)
+// Stair tower standing in FRONT of the gallery (stare.png, photos 145456, 145430, 145543):
+// The signature curved semicircular half-landing drum projects OUTWARD in FRONT (+z) facing the walkway.
+// Flights connect the corridor opening to the curved front landing; central spine bears the building sign.
+function frontStair(B, { x, dir = -1, sign = 'B 508', F, FH, P, G, lvl }) {
+  const xc = x
+  const zc = G + 1.55 // center of curved landing drum along Z (in front of corridor)
+  const R = 1.55 // radius of curved landing drum projecting forward
+  const nSteps = 10, T = 0.22
+  const flightW = 1.30 // lane width
+  const x0 = xc - flightW - 0.25, x1 = xc + flightW + 0.25
 
-  const flight = (yA, yB, z0, z1, x0, x1) => {
-    const rise = (yB - yA) / nSteps, run = (x1 - x0) / nSteps
-    for (let i = 0; i < nSteps; i++) {
-      const u = x0 + run * i, v = x0 + run * (i + 1)
-      B.add('stairs', box(Math.min(u, v), yA + rise * i - 0.02, z0, Math.max(u, v), yA + rise * (i + 1), z1))
-    }
-    B.add('concrete', hexa(
-      [[x0, yA - T - 0.05, z0], [x1, yB - T - rise, z0], [x1, yB - T - rise, z1], [x0, yA - T - 0.05, z1]],
-      [[x0, yA - 0.05, z0], [x1, yB - rise, z0], [x1, yB - rise, z1], [x0, yA - 0.05, z1]]))
-    B.collider(hexa(
-      [[x0, yA - 0.2, z0], [x1, yB - 0.2, z0], [x1, yB - 0.2, z1], [x0, yA - 0.2, z1]],
-      [[x0, yA, z0], [x1, yB, z0], [x1, yB, z1], [x0, yA, z1]]))
-  }
-  const sloped = (x0, x1, yA, yB, z0, z1, h, down) => B.add('parapet', hexa(
-    [[x0, yA - down, z0], [x1, yB - down, z0], [x1, yB - down, z1], [x0, yA - down, z1]],
-    [[x0, yA + h, z0], [x1, yB + h, z0], [x1, yB + h, z1], [x0, yA + h, z1]]), { collide: true })
-  const semi = (r) => arcPts(xl, zc, r, -Math.PI / 2, Math.PI / 2, 24).map(([px, pz]) => [xl + dir * (px - xl), pz])
-  const xb0 = Math.min(xBack, xBack - dir * 0.18), xb1 = Math.max(xBack, xBack - dir * 0.18)
+  // Semicircular landing disc in plan (curving toward +z into the walkway)
+  const semiPts = arcPts(xc, zc, R, 0, Math.PI, 24)
+  const drumDisc = semiPts.concat([[xc - R, zc], [xc + R, zc]])
+
+  // Ground flight steps up from the walkway (+Z) onto the ground landing:
+  B.add('stairs', box(xc - 1.1, 0, zc + R, xc + 1.1, P * 0.5, zc + R + 0.35))
+  B.collider(hexa(
+    [[xc - 1.1, 0, zc + R + 0.9], [xc + 1.1, 0, zc + R + 0.9], [xc + 1.1, 0, zc + R], [xc - 1.1, 0, zc + R]],
+    [[xc - 1.1, 0.02, zc + R + 0.9], [xc + 1.1, 0.02, zc + R + 0.9], [xc + 1.1, P, zc + R], [xc - 1.1, P, zc + R]]
+  ))
+
+  // Under lowest drum (ground level): massive vertical concrete support pier (photo 145456)
+  B.add('render', box(xc - 0.45, 0, zc - 0.2, xc + 0.45, lvl(0) + FH / 2 - 0.35, zc + 0.45), { collide: true })
+
+  // Stair tower vertical sign plaque (photo 145543): blue enamel plaque with "B 508" or "B 509"
+  const signKey = sign.includes('508') ? 'towerSign508' : sign.includes('509') ? 'towerSign509' : 'towerSign510'
+  B.frame(xc, lvl(0) + FH / 2 + 0.4, zc + R + 0.03, 0, () => B.add(signKey, quad(0.52, 0.95)))
 
   for (let k = 0; k < F; k++) {
     const y = lvl(k), ym = y + FH / 2, y2 = lvl(k + 1)
-    // floor landing in front of the corridor opening
-    B.add('concrete', box(L0, k === 0 ? 0 : y - 0.3, G - 0.2, L1, y, zo1), { collide: true })
-    if (k > 0) B.add('parapet', box(L0, y - 0.45, zo1, L1, y + 1.05, zOut), { collide: true }) // outer edge
-    if (k > 0) B.add('parapet', box(xb0, y - 0.45, G, xb1, y + 1.05, zOut), { collide: true }) // side
-    if (k === F - 1) { // top: inner lane has no flight above -> close it
-      const c0 = Math.min(xa, xa + dir * 0.18), c1 = Math.max(xa, xa + dir * 0.18)
-      B.add('parapet', box(c0, y - 0.45, G, c1, y + 1.05, zo0), { collide: true })
+
+    // 1. Floor landing extending out from corridor opening (from z = G - 0.2 to z = G + 0.55)
+    B.add('concrete', box(x0, k === 0 ? 0 : y - 0.28, G - 0.2, x1, y, G + 0.55), { collide: true })
+    B.add('corridorTile', box(x0, y - 0.02, G - 0.15, x1, y, G + 0.55))
+    // Side parapets closing the floor landing sides
+    if (k > 0) {
+      B.add('parapet', box(x0 - 0.18, y - 0.45, G, x0, y + 1.05, G + 0.55), { collide: true })
+      B.add('parapet', box(x1, y - 0.45, G, x1 + 0.18, y + 1.05, G + 0.55), { collide: true })
+    }
+
+    if (k === F - 1) {
+      // Top floor: close outer edge with parapet
+      B.add('parapet', box(x0, y - 0.45, G + 0.40, x1, y + 1.05, G + 0.55), { collide: true })
       break
     }
-    // flight A (inner lane) toward the half-landing
-    flight(y, ym, zi0, zi1, xa, xl)
-    sloped(xa, xl, y, ym, G - 0.02, zi0 + 0.06, 1.0, 0.3) // against the corridor
-    sloped(xa, xl, y, ym, zi1, zi1 + 0.06, 1.0, 0.3)      // divider
-    // semicircular half-landing (+ pier under the lowest one)
-    B.add('concrete', prism(semi(RB), ym - 0.4, ym), { collide: true })
-    B.add('parapet', wallPath(semi(RB + 0.03), 0.2, ym - 0.75, ym + 1.05), { collide: true })
-    B.add('parapet', wallPath(semi(RB + 0.06), 0.3, ym + 0.97, ym + 1.07))
-    B.add('trim', prism(semi(RB - 0.25), ym - 0.42, ym - 0.4)) // white-painted soffit
-    if (k === 0) B.add('render', box(Math.min(xl + dir * 0.5, xl + dir * 1.1), 0, zc - 0.35, Math.max(xl + dir * 0.5, xl + dir * 1.1), ym - 0.35, zc + 0.35), { collide: true })
-    // flight B (outer lane) back to the next floor landing
-    flight(ym, y2, zo0, zo1, xl, xa)
-    sloped(xl, xa, ym, y2, zo1, zOut, 1.05, k === 0 ? ym + 0.2 : 0.5) // outer face: solid down to the ground on the first run
-    sloped(xl, xa, ym, y2, zo0 - 0.06, zo0, 1.0, 0.3)
+
+    // 2. The Curved Half-Landing Drum at height ym (projecting forward to +Z)
+    B.add('concrete', prism(drumDisc, ym - 0.35, ym), { collide: true })
+    B.add('corridorTile', prism(drumDisc, ym - 0.02, ym))
+    // Tall curved parapet wall on the front (+z) of the drum
+    B.add('parapet', wallPath(arcPts(xc, zc, R - 0.08, 0, Math.PI, 24), 0.22, ym - 0.6, ym + 1.05), { collide: true })
+    B.add('parapet', wallPath(arcPts(xc, zc, R - 0.05, 0, Math.PI, 24), 0.30, ym + 0.98, ym + 1.07))
+    // White-painted fascia/trim along the curved underside
+    B.add('trim', prism(semiPts.concat([[xc - R, zc], [xc + R, zc]]), ym - 0.42, ym - 0.35))
+
+    // 3. Central structural spine/wall between the two flights
+    B.add('render', box(xc - 0.12, ym - 0.35, G + 0.45, xc + 0.12, y2 + 1.0, zc), { collide: true })
+
+    // 4. Flight A (right lane, x in [xc + 0.12, xc + 0.12 + flightW]):
+    // Runs from z = G + 0.45 to z = zc, climbing from y to ym
+    const xa0 = xc + 0.12, xa1 = xa0 + flightW
+    const za0 = G + 0.45, za1 = zc
+    const riseA = (ym - y) / nSteps, runA = (za1 - za0) / nSteps
+    for (let i = 0; i < nSteps; i++) {
+      const zStep0 = za0 + runA * i, zStep1 = za0 + runA * (i + 1)
+      const yStep0 = y + riseA * i, yStep1 = y + riseA * (i + 1)
+      B.add('stairs', box(xa0, yStep0 - 0.02, zStep0, xa1, yStep1, zStep1))
+      B.add('corridorTile', box(xa0 + 0.02, yStep1 - 0.02, zStep0, xa1 - 0.02, yStep1, zStep1))
+    }
+    // Under-flight concrete soffit slab
+    B.add('concrete', hexa(
+      [[xa0, y - T - 0.05, za0], [xa1, y - T - 0.05, za0], [xa1, ym - T - riseA, za1], [xa0, ym - T - riseA, za1]],
+      [[xa0, y - 0.05, za0], [xa1, y - 0.05, za0], [xa1, ym - riseA, za1], [xa0, ym - riseA, za1]]
+    ))
+    B.collider(hexa(
+      [[xa0, y - 0.2, za0], [xa1, y - 0.2, za0], [xa1, ym - 0.2, za1], [xa0, ym - 0.2, za1]],
+      [[xa0, y, za0], [xa1, y, za0], [xa1, ym, za1], [xa0, ym, za1]]
+    ))
+    // Outer sloping parapet on Flight A
+    B.add('parapet', hexa(
+      [[xa1, y - 0.45, za0], [xa1 + 0.18, y - 0.45, za0], [xa1 + 0.18, ym - 0.45, za1], [xa1, ym - 0.45, za1]],
+      [[xa1, y + 1.05, za0], [xa1 + 0.18, y + 1.05, za0], [xa1 + 0.18, ym + 1.05, za1], [xa1, ym + 1.05, za1]]
+    ), { collide: true })
+
+    // 5. Flight B (left lane, x in [xc - 0.12 - flightW, xc - 0.12]):
+    // Runs from z = zc back to z = G + 0.45, climbing from ym to y2
+    const xb0 = xc - 0.12 - flightW, xb1 = xc - 0.12
+    const zb0 = zc, zb1 = G + 0.45
+    const riseB = (y2 - ym) / nSteps, runB = (zb1 - zb0) / nSteps
+    for (let i = 0; i < nSteps; i++) {
+      const zStep0 = zb0 + runB * i, zStep1 = zb0 + runB * (i + 1)
+      const yStep0 = ym + riseB * i, yStep1 = ym + riseB * (i + 1)
+      B.add('stairs', box(xb0, yStep0 - 0.02, Math.min(zStep0, zStep1), xb1, yStep1, Math.max(zStep0, zStep1)))
+      B.add('corridorTile', box(xb0 + 0.02, yStep1 - 0.02, Math.min(zStep0, zStep1), xb1 - 0.02, yStep1, Math.max(zStep0, zStep1)))
+    }
+    // Under-flight concrete soffit slab
+    B.add('concrete', hexa(
+      [[xb0, ym - T - 0.05, zb0], [xb1, ym - T - 0.05, zb0], [xb1, y2 - T - riseB, zb1], [xb0, y2 - T - riseB, zb1]],
+      [[xb0, ym - 0.05, zb0], [xb1, ym - 0.05, zb0], [xb1, y2 - riseB, zb1], [xb0, y2 - riseB, zb1]]
+    ))
+    B.collider(hexa(
+      [[xb0, ym - 0.2, zb0], [xb1, ym - 0.2, zb0], [xb1, y2 - 0.2, zb1], [xb0, y2 - 0.2, zb1]],
+      [[xb0, ym, zb0], [xb1, ym, zb0], [xb1, y2, zb1], [xb0, y2, zb1]]
+    ))
+    // Outer sloping parapet on Flight B
+    B.add('parapet', hexa(
+      [[xb0 - 0.18, ym - 0.45, zb0], [xb0, ym - 0.45, zb0], [xb0, y2 - 0.45, zb1], [xb0 - 0.18, y2 - 0.45, zb1]],
+      [[xb0 - 0.18, ym + 1.05, zb0], [xb0, ym + 1.05, zb0], [xb0, y2 + 1.05, zb1], [xb0 - 0.18, y2 + 1.05, zb1]]
+    ), { collide: true })
   }
-  // ground: steps up from the walkway onto the first landing
-  B.add('stairs', box(L0, 0, zOut, L1, P * 0.5, zOut + 0.35))
-  B.collider(hexa([[L0, 0, zOut + 0.9], [L1, 0, zOut + 0.9], [L1, 0, zo1 - 0.1], [L0, 0, zo1 - 0.1]],
-    [[L0, 0.02, zOut + 0.9], [L1, 0.02, zOut + 0.9], [L1, P, zo1 - 0.1], [L0, P, zo1 - 0.1]]))
 }

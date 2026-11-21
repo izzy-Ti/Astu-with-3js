@@ -8,7 +8,7 @@
 //    the east, plain gable ends, square stair landings) across a dirt yard to the west.
 // Site frame: x along the blocks (ENE), z across (SSE).
 import * as THREE from 'three'
-import { Builder, box, prism, rectPts } from './builder.js'
+import { Builder, box, prism, rectPts, hexa } from './builder.js'
 import { galleryBlock } from './block.js'
 import { tree, palm, conifer, shrub, lamp, noticeBoard, planter, roundPlanter, tent, cafeTable, fence, rng } from './nature.js'
 
@@ -31,19 +31,21 @@ export function buildSite() {
 
     // ================================================== MAIN PAIR · School of Electrical Eng.
     const L = 44, D = 8.5, G = 2.6, W = 6 // W = half-gap between gallery edges
-    B.frame(-L / 2, 0, -W - G, 0, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'plain', stone: ['start'], front: [{ x: 0.7 * L, dir: -1 }] }))
-    B.frame(L / 2, 0, W + G, Math.PI, () => galleryBlock(B, { len: L, D, G, start: 'plain', end: 'round', stone: ['end'], front: [{ x: 0.7 * L, dir: -1 }] }))
+    // North block (Block 508): front stair at x = 28 (world X = +6.0), projecting South into walkway
+    B.frame(-L / 2, 0, -W - G, 0, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['start'], front: [{ x: 28, dir: -1, sign: 'B 508' }] }))
+    // South block (Block 509): front stair at x = 16 (world X = +6.0), projecting North into walkway
+    B.frame(L / 2, 0, W + G, Math.PI, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['end'], front: [{ x: 16, dir: 1, sign: 'B 509' }] }))
     ko(-L / 2 - 3, -W - G - D - 2, L / 2 + 3, W + G + D + 2)
-    places.push({ name: 'School of Electrical Engineering · north block', x: 0, z: -W - G - D / 2, r: 30 })
-    places.push({ name: 'School of Electrical Engineering · south block', x: 0, z: W + G + D / 2, r: 30 })
+    places.push({ name: 'School of Electrical Engineering · Block 508 (north block)', x: 0, z: -W - G - D / 2, r: 30 })
+    places.push({ name: 'School of Electrical Engineering · Block 509 (south block)', x: 0, z: W + G + D / 2, r: 30 })
     places.push({ name: 'Electrical Eng. walkway', x: 0, z: 0, r: 24 })
 
     // walkway: central paving + paved margins along the low walls, long raised planters between
     B.add('paving', prism(rectPts(-30, -W, 26, W), 0, 0.05), { collide: true })
-    // front stair towers stand at x 2.9..9.6 (north) and -9.6..-2.9 (south): beds stop short of them
+    // front stair towers stand at x ≈ +6.0 on both sides: beds stop short of them (gap 1.8..10.2)
     const side = {
-      [-1]: { beds: [[-20.5, -10.4], [-7.2, 1.6], [11.2, 17.2]], palms: [-18, -12.5, -5, 0.5, 12.5, 15.5], trees: [-15.5, -2.5, 14] },
-      [1]: { beds: [[-20.5, -11.2], [-1.6, 7.2], [10.4, 17.2]], palms: [-18, -13.5, 0.5, 5, 12, 15.5], trees: [-15.5, 2.5, 13.8] },
+      [-1]: { beds: [[-20.5, -10.4], [-7.2, 1.8], [10.2, 17.2]], palms: [-18, -12.5, -5, 0.5, 12.5, 15.5], trees: [-15.5, -2.5, 14] },
+      [1]: { beds: [[-20.5, -10.4], [-7.2, 1.8], [10.2, 17.2]], palms: [-18, -13.5, 0.5, 5, 12, 15.5], trees: [-15.5, 2.5, 13.8] },
     }
     for (const s of [-1, 1]) {
       const cfg = side[s], zz = s * 3.3
@@ -51,8 +53,8 @@ export function buildSite() {
       cfg.palms.forEach((x, i) => palm(B, x, zz + (i % 2 ? 0.5 : -0.4) * s, { h: 0.5 + (i % 3) * 0.4, fronds: 13, flen: 1.4, trunkR: 0.11, seed: 30 + i + s * 10 }))
       cfg.trees.forEach((x, i) => tree(B, x, zz, { h: 6 + (i % 2), crown: 1.8, kind: i % 2 ? 'round' : 'tulip', seed: 70 + i + s * 5 }))
       shrub(B, s * 9, zz, { s: 0.9, seed: 3 + s })
-      lamp(B, -6, s * 1.4, globes); lamp(B, 6, s * 1.4, globes)
-      lamp(B, -s * 10.6, s * 2.3, globes, { sign: true, ry: s > 0 ? 0 : Math.PI }) // lamp with blue sign at the stair foot (145541-145546)
+      lamp(B, -6, s * 1.4, globes)
+      lamp(B, 6, s * 1.6, globes) // lamp at the stair foot (photo 145543)
     }
     // west entrance: big Canary palm, lamp, cluster of green notice-board stands (145634-145638)
     B.add('paving', prism(rectPts(-34, -2.2, -30, 2.2), 0, 0.05), { collide: true })
@@ -83,8 +85,8 @@ export function buildSite() {
     // ================================================== BLOCK 510 / LAB 5 · U-block
     const UL = 32, UD = 7, UG = 2.4, UW = 4.5, UX = -78, UF = 3 // wings run UX..UX+UL
     const uz = UW + UG + UD // outer face of the wings
-    B.frame(UX, 0, -UW - UG, 0, () => galleryBlock(B, { len: UL, D: UD, G: UG, F: UF, style: 'column', start: 'open', end: 'stairSquare', gable: [false, true], trim: [UG, 0], gaps: [0.45], posters: false }))
-    B.frame(UX + UL, 0, UW + UG, Math.PI, () => galleryBlock(B, { len: UL, D: UD, G: UG, F: UF, style: 'column', start: 'stairSquare', end: 'open', gable: [true, false], trim: [0, UG], gaps: [0.55], posters: false }))
+    B.frame(UX, 0, -UW - UG, 0, () => galleryBlock(B, { len: UL, D: UD, G: UG, F: UF, style: 'column', start: 'open', end: 'plain', gable: [false, true], trim: [UG, 0], gaps: [0.45], posters: false }))
+    B.frame(UX + UL, 0, UW + UG, Math.PI, () => galleryBlock(B, { len: UL, D: UD, G: UG, F: UF, style: 'column', start: 'plain', end: 'open', gable: [true, false], trim: [0, UG], gaps: [0.55], posters: false }))
     // cross wing closing the west side of the court (gallery faces east)
     B.frame(UX, 0, UW + UG, Math.PI / 2, () => galleryBlock(B, { len: 2 * (UW + UG), D: UD, G: UG, F: UF, style: 'column', start: 'open', end: 'open', gable: [false, false], roof: false, trim: [UG, UG], gaps: [0.5], posters: false }))
     for (const s of [-1, 1]) { // corner masses where the wings meet the cross wing
@@ -92,9 +94,52 @@ export function buildSite() {
       B.add('render', box(UX - UD, 0, Math.min(z0, z1), UX, 0.45 + UF * 3.4 + 0.45, Math.max(z0, z1)), { collide: true })
     }
     B.add('roof', box(UX - UD - 0.4, 0.45 + UF * 3.4 + 0.45, -uz - 0.4, UX + 0.2, 0.45 + UF * 3.4 + 0.6, uz + 0.4))
-    B.add('paving', prism(rectPts(UX, -UW, UX + UL + 2, UW), 0, 0.05), { collide: true })
+
+    // Courtyard central paving and side drainage gutters (photo 145622)
+    B.add('paving', prism(rectPts(UX, -UW + 0.4, UX + UL + 2, UW - 0.4), 0, 0.05), { collide: true })
+    // Sunken drainage troughs along both sides
+    B.add('curb', box(UX, 0, -UW - 0.35, UX + UL + 1.5, 0.02, -UW + 0.35))
+    B.add('curb', box(UX, 0, UW - 0.35, UX + UL + 1.5, 0.02, UW + 0.35))
+    // Elevated wing walkway slabs
+    B.add('corridorTile', box(UX, 0.02, -UW - UG, UX + UL, 0.08, -UW - 0.35), { collide: true })
+    B.add('corridorTile', box(UX, 0.02, UW + 0.35, UX + UL, 0.08, UW + UG), { collide: true })
+    // Access bridges across the gutters
+    for (const bx of [UX + 6, UX + 14, UX + 22]) {
+      B.add('curb', box(bx - 0.8, 0.05, -UW - 0.4, bx + 0.8, 0.08, -UW + 0.4), { collide: true })
+      B.add('curb', box(bx - 0.8, 0.05, UW - 0.4, bx + 0.8, 0.08, UW + 0.4), { collide: true })
+    }
+
+    // Central open staircase at the west cross-wing (photo 145622)
+    {
+      const sx0 = UX + 0.2, sx1 = UX + 3.2, sz0 = -1.6, sz1 = 1.6
+      for (let k = 0; k < UF - 1; k++) {
+        const y0 = 0.45 + k * 3.4, ym = y0 + 1.7, y1 = 0.45 + (k + 1) * 3.4
+        // Landing at halfway height
+        B.add('concrete', box(sx0, ym - 0.25, sz0, sx0 + 1.2, ym, sz1), { collide: true })
+        B.add('corridorTile', box(sx0, ym - 0.02, sz0, sx0 + 1.2, ym, sz1))
+        B.add('parapet', box(sx0 - 0.15, ym - 0.3, sz0, sx0, ym + 1.0, sz1), { collide: true })
+        // Flight 1: from y0 up to ym (north lane)
+        const nSt = 9, run = 2.0 / nSt, rse = 1.7 / nSt
+        for (let i = 0; i < nSt; i++) {
+          B.add('stairs', box(sx0 + 1.2 + run * i, y0 + rse * i, -1.5, sx0 + 1.2 + run * (i + 1), y0 + rse * (i + 1), -0.1))
+        }
+        B.collider(hexa([[sx0 + 1.2, y0, -1.5], [sx1, ym, -1.5], [sx1, ym, -0.1], [sx0 + 1.2, y0, -0.1]],
+          [[sx0 + 1.2, y0 + 0.02, -1.5], [sx1, ym + 0.02, -1.5], [sx1, ym + 0.02, -0.1], [sx0 + 1.2, y0 + 0.02, -0.1]]))
+        // Flight 2: from ym up to y1 (south lane)
+        for (let i = 0; i < nSt; i++) {
+          B.add('stairs', box(sx1 - run * (i + 1), ym + rse * i, 0.1, sx1 - run * i, ym + rse * (i + 1), 1.5))
+        }
+        B.collider(hexa([[sx1, ym, 0.1], [sx0 + 1.2, y1, 0.1], [sx0 + 1.2, y1, 1.5], [sx1, ym, 1.5]],
+          [[sx1, ym + 0.02, 0.1], [sx0 + 1.2, y1 + 0.02, 0.1], [sx0 + 1.2, y1 + 0.02, 1.5], [sx1, ym + 0.02, 1.5]]))
+        // Central handrail divider
+        B.add('metal', box(sx0 + 1.1, y0, -0.05, sx1, y1 + 1.0, 0.05))
+      }
+    }
+
     lamp(B, UX + UL - 1.5, -UW + 0.8, globes); lamp(B, UX + 12, UW - 0.8, globes)
-    tree(B, UX + UL + 3.5, -UW - 1.5, { h: 7, crown: 3, kind: 'round', seed: 81 })
+    // Trees inside and around Block 510 court (photos 145622, 145624)
+    tree(B, UX + UL - 1.5, -UW + 1.5, { h: 7, crown: 3.2, kind: 'round', seed: 81 })
+    tree(B, UX + UL + 3.5, -UW - 1.5, { h: 7.5, crown: 3.5, kind: 'round', seed: 83 })
     conifer(B, UX + UL + 4.5, UW + 1.2, { h: 5.5, seed: 82 })
     ko(UX - UD - 3, -uz - 3, UX + UL + 6, uz + 3)
     places.push({ name: 'Block 510 · Python Lab (north wing)', x: UX + UL / 2, z: -UW - UG - UD / 2, r: 18 })
