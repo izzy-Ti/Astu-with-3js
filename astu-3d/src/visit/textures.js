@@ -106,27 +106,54 @@ export function stoneTex(seed = 3) {
 // worn and stained (photos 145640-145649). One tile = 3 m.
 export function pavingTex(seed = 4) {
   const S = 512, [c, g] = canvas(S), r = rng(seed)
-  g.fillStyle = '#5b5346'; g.fillRect(0, 0, S, S)
-  const rows = 6, rh = S / rows
+  g.fillStyle = '#484338'; g.fillRect(0, 0, S, S)
+  const rows = 8, rh = S / rows, cols = 8, cw = S / cols
   for (let j = 0; j < rows; j++) {
-    let x = -(r() * 60)
-    const x00 = x
-    while (x < S + x00) {
-      const w = Math.min(70 + r() * 70, S + x00 - x), t = 0.86 + r() * 0.2
-      g.fillStyle = `rgb(${[176 * t, 163 * t, 140 * t].map(Math.round)})`
-      for (const ox of [0, S]) g.fillRect(x + ox + 2, j * rh + 2, w - 4, rh - 4)
-      if (r() < 0.2) { // crack
-        g.strokeStyle = 'rgba(60,50,40,0.45)'; g.lineWidth = 1.2; g.beginPath()
-        let cx = x + r() * w, cy = j * rh + 3; g.moveTo(cx, cy)
-        for (let k = 0; k < 6; k++) { cx += (r() - 0.5) * 22; cy += rh / 7; g.lineTo(cx, cy) }
+    for (let i = 0; i < cols; i++) {
+      const x = i * cw, y = j * rh
+      const t = 0.88 + r() * 0.22, warm = (r() - 0.5) * 8
+      g.fillStyle = `rgb(${[184 * t + warm, 172 * t, 150 * t - warm].map(Math.round)})`
+      g.fillRect(x + 2, y + 2, cw - 4, rh - 4)
+      // bevel highlights
+      g.fillStyle = 'rgba(255,250,235,0.22)'; g.fillRect(x + 2, y + 2, cw - 4, 1.5); g.fillRect(x + 2, y + 2, 1.5, rh - 4)
+      g.fillStyle = 'rgba(40,35,28,0.25)'; g.fillRect(x + 2, y + rh - 3.5, cw - 4, 1.5); g.fillRect(x + cw - 3.5, y + 2, 1.5, rh - 4)
+      if (r() < 0.15) { // hairline crack
+        g.strokeStyle = 'rgba(60,50,40,0.4)'; g.lineWidth = 1; g.beginPath()
+        let cx = x + 6 + r() * (cw - 12), cy = y + 3; g.moveTo(cx, cy)
+        for (let k = 0; k < 5; k++) { cx += (r() - 0.5) * 14; cy += rh / 6; g.lineTo(cx, cy) }
         g.stroke()
       }
-      x += w
     }
   }
-  blotches(g, S, S, 70, r, ['95,82,62', '215,203,178', '125,108,80', '70,66,58'], 12, 80, 0.15)
-  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(70,58,40,${0.15 + r() * 0.25})`; g.fillRect(r() * S, r() * S, 1 + r() * 2, 1 + r() * 2) }
-  grain(g, S, S, 20, r)
+  blotches(g, S, S, 60, r, ['95,82,62', '215,203,178', '125,108,80', '70,66,58'], 12, 80, 0.15)
+  grain(g, S, S, 18, r)
+  return tex(c)
+}
+
+// gallery corridor & stair landing floor tile: light terrazzo/concrete square tiles with joint grid
+export function corridorTileTex(seed = 18) {
+  const S = 512, [c, g] = canvas(S), r = rng(seed)
+  g.fillStyle = '#655e52'; g.fillRect(0, 0, S, S) // dark grout joints
+  const tiles = 8, ts = S / tiles
+  for (let y = 0; y < tiles; y++) {
+    for (let x = 0; x < tiles; x++) {
+      const x0 = x * ts + 2, y0 = y * ts + 2, tw = ts - 4, th = ts - 4
+      const t = 0.92 + r() * 0.16
+      g.fillStyle = `rgb(${[202 * t, 192 * t, 172 * t].map(Math.round)})`
+      g.fillRect(x0, y0, tw, th)
+      // terrazzo chips
+      for (let k = 0; k < 28; k++) {
+        const chipCol = r() < 0.4 ? 'rgba(70,65,58,0.35)' : r() < 0.7 ? 'rgba(255,255,245,0.45)' : 'rgba(160,140,110,0.3)'
+        g.fillStyle = chipCol
+        g.fillRect(x0 + 2 + r() * (tw - 4), y0 + 2 + r() * (th - 4), 1 + r() * 2.5, 1 + r() * 2)
+      }
+      // light edge bevel
+      g.fillStyle = 'rgba(255,252,240,0.28)'; g.fillRect(x0, y0, tw, 1.5); g.fillRect(x0, y0, 1.5, th)
+      g.fillStyle = 'rgba(40,36,30,0.22)'; g.fillRect(x0, y0 + th - 1.5, tw, 1.5); g.fillRect(x0 + tw - 1.5, y0, 1.5, th)
+    }
+  }
+  blotches(g, S, S, 40, r, ['140,130,115', '230,222,205'], 20, 90, 0.1)
+  grain(g, S, S, 14, r)
   return tex(c)
 }
 
@@ -216,32 +243,65 @@ export function windowTex() {
   return tex(c, { repeat: true })
 }
 
-// classroom door (photos 113643, 145547): tall yellow frame, two worn brown timber leaves, glazed
-// transom with a taped notice. 1.3 m x 2.85 m.
-export function doorTex() {
-  const W = 152, H = 334, [c, g] = canvas(W, H), r = rng(9)
+// classroom door (photos 113643, 145547): tall frame, two worn brown timber leaves, glazed
+// transom with louvres. 1.3 m x 2.85 m.
+export function doorTex(seed = 9) {
+  const W = 256, H = 512, [c, g] = canvas(W, H), r = rng(seed)
   g.fillStyle = '#d9b651'; g.fillRect(0, 0, W, H) // frame, same yellow as the wall
-  // transom
-  g.fillStyle = '#6c7a48'; g.fillRect(6, 6, W - 12, 78)
-  for (const [x, w] of [[10, 64], [78, 64]]) {
-    const gr = g.createLinearGradient(0, 10, 0, 80); gr.addColorStop(0, '#3a474b'); gr.addColorStop(1, '#1d2325')
-    g.fillStyle = gr; g.fillRect(x, 10, w, 70)
+  // frame inner shadow
+  g.fillStyle = 'rgba(40,32,15,0.4)'; g.fillRect(10, 10, W - 20, H - 10)
+  // transom (y: 12..120)
+  g.fillStyle = '#556238'; g.fillRect(12, 12, W - 24, 110)
+  const tw = (W - 32) / 2
+  for (let i = 0; i < 2; i++) {
+    const tx = 16 + i * (tw + 4)
+    const gr = g.createLinearGradient(0, 16, 0, 118); gr.addColorStop(0, '#3a474b'); gr.addColorStop(1, '#1b2123')
+    g.fillStyle = gr; g.fillRect(tx, 16, tw - 4, 102)
+    // louver blades
+    for (let ly = 24; ly < 114; ly += 16) {
+      g.fillStyle = 'rgba(210,225,230,0.3)'; g.fillRect(tx + 2, ly, tw - 8, 4)
+      g.fillStyle = 'rgba(10,15,20,0.5)'; g.fillRect(tx + 2, ly + 4, tw - 8, 3)
+    }
   }
-  g.fillStyle = '#e9e7dc'; g.fillRect(52, 26, 44, 30)
-  g.fillStyle = 'rgba(30,30,30,0.7)'; for (let y = 32; y < 52; y += 6) g.fillRect(57, y, 34, 2)
-  // leaves
-  const leaf = (x0, w) => {
-    const t = 0.9 + r() * 0.2
-    g.fillStyle = `rgb(${[122 * t, 92 * t, 50 * t].map(Math.round)})`; g.fillRect(x0, 88, w, H - 88)
-    for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(${r() < 0.5 ? '50,32,12' : '190,160,105'},${r() * 0.2})`; g.fillRect(x0 + r() * w, 88 + r() * 200, 1 + r() * 2, 10 + r() * 60) }
-    g.strokeStyle = 'rgba(40,26,10,0.5)'; g.lineWidth = 2; g.strokeRect(x0 + 5, 96, w - 10, 96); g.strokeRect(x0 + 5, 200, w - 10, 122)
-    g.strokeStyle = 'rgba(40,26,10,0.25)'; g.beginPath(); g.moveTo(x0 + 5, 96); g.lineTo(x0 + w - 5, 192); g.moveTo(x0 + w - 5, 96); g.lineTo(x0 + 5, 192); g.stroke()
+  // taped white notice paper in transom
+  g.fillStyle = '#f2efe6'; g.fillRect(80, 42, 60, 44)
+  g.fillStyle = 'rgba(40,40,40,0.7)'; for (let y = 50; y < 80; y += 7) g.fillRect(86, y, 48, 2.5)
+  // wooden door leaves (y: 128..512)
+  const lw = (W - 28) / 2
+  const drawLeaf = (x0, w) => {
+    const t = 0.92 + r() * 0.16
+    g.fillStyle = `rgb(${[136 * t, 98 * t, 54 * t].map(Math.round)})`
+    g.fillRect(x0, 128, w, H - 128)
+    // wood grain lines
+    for (let k = 0; k < 45; k++) {
+      g.fillStyle = `rgba(${r() < 0.5 ? '50,30,10' : '190,150,90'},${0.08 + r() * 0.14})`
+      g.fillRect(x0 + r() * w, 128 + r() * 320, 1 + r() * 2, 20 + r() * 80)
+    }
+    // top and bottom recessed panels
+    const pw = w - 14, ph1 = 145, ph2 = 175
+    for (const [py, ph] of [[140, ph1], [305, ph2]]) {
+      g.fillStyle = 'rgba(30,20,10,0.45)'; g.fillRect(x0 + 7, py, pw, ph)
+      g.fillStyle = `rgb(${[120 * t, 85 * t, 46 * t].map(Math.round)})`; g.fillRect(x0 + 9, py + 2, pw - 4, ph - 4)
+      // panel bevels
+      g.fillStyle = 'rgba(230,195,140,0.25)'; g.fillRect(x0 + 9, py + 2, pw - 4, 2); g.fillRect(x0 + 9, py + 2, 2, ph - 4)
+      g.fillStyle = 'rgba(25,15,5,0.35)'; g.fillRect(x0 + 9, py + ph - 4, pw - 4, 2); g.fillRect(x0 + pw + 5, py + 2, 2, ph - 4)
+    }
   }
-  leaf(8, 66); leaf(78, 66)
-  g.fillStyle = '#1b1b1b'; g.fillRect(74, 88, 4, H - 88)
-  g.fillStyle = '#b9b3a2'; g.fillRect(66, 204, 5, 14); g.fillRect(81, 204, 5, 14)
-  const dg = g.createLinearGradient(0, H - 50, 0, H); dg.addColorStop(0, 'rgba(30,25,20,0)'); dg.addColorStop(1, 'rgba(30,25,20,0.6)')
-  g.fillStyle = dg; g.fillRect(8, H - 50, W - 16, 50) // kicked, dirty bottom
+  drawLeaf(14, lw)
+  drawLeaf(14 + lw + 2, lw)
+  // meeting stile center seam
+  g.fillStyle = '#1c1610'; g.fillRect(14 + lw, 128, 2, H - 128)
+  // brass/silver door handles & escutcheon
+  for (const hx of [14 + lw - 14, 14 + lw + 6]) {
+    g.fillStyle = '#b0a894'; g.fillRect(hx, 305, 8, 32)
+    g.fillStyle = '#e4dfd2'; g.fillRect(hx + 1, 306, 6, 2)
+    g.fillStyle = '#48443b'; g.fillRect(hx + 2, 324, 4, 6) // keyhole
+    g.fillStyle = '#d5cebe'; g.fillRect(hx - 10, 312, 14, 5) // lever handle
+  }
+  // kickplate and dirt along bottom
+  const dg = g.createLinearGradient(0, H - 65, 0, H); dg.addColorStop(0, 'rgba(30,25,20,0)'); dg.addColorStop(1, 'rgba(25,20,15,0.7)')
+  g.fillStyle = dg; g.fillRect(14, H - 65, W - 28, 65)
+  grain(g, W, H, 12, r)
   return tex(c, { repeat: false })
 }
 
@@ -262,13 +322,54 @@ export function posterTex() {
 }
 
 // small blue room-number plate
-export function plateTex() {
-  const [c, g] = canvas(64, 48)
-  g.fillStyle = '#1c4fa0'; g.fillRect(0, 0, 64, 48)
-  g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(3, 3, 58, 42)
-  g.fillStyle = '#fff'; g.font = 'bold 15px Arial'; g.textAlign = 'center'; g.fillText('5' + (10 + Math.floor(Math.random() * 9)), 32, 22)
-  g.font = '10px Arial'; g.fillText('ROOM', 32, 38)
+export function plateTex(num = '509', sub = 'ROOM') {
+  const [c, g] = canvas(128, 96)
+  g.fillStyle = '#144688'; g.fillRect(0, 0, 128, 96)
+  g.strokeStyle = '#f4f6fa'; g.lineWidth = 4; g.strokeRect(6, 6, 116, 84)
+  g.fillStyle = '#fff'; g.font = 'bold 32px Arial'; g.textAlign = 'center'
+  g.fillText(String(num), 64, 46)
+  g.font = 'bold 16px Arial'
+  g.fillText(sub, 64, 76)
   return tex(c, { repeat: false })
+}
+
+// prominent vertical building code plaque mounted on stair tower pillars (photo 145543)
+export function towerSignTex(name = 'B 509') {
+  const [c, g] = canvas(128, 256)
+  g.fillStyle = '#0f3875'; g.fillRect(0, 0, 128, 256)
+  g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.strokeRect(6, 6, 116, 244)
+  g.fillStyle = '#ffffff'; g.textAlign = 'center'
+  g.font = 'bold 36px Arial'; g.fillText(name.slice(0, 1), 64, 55)
+  g.font = 'bold 44px Arial'; g.fillText(name.slice(2), 64, 120)
+  g.fillStyle = '#d8bb50'; g.fillRect(20, 145, 88, 5)
+  g.fillStyle = '#e8edf6'; g.font = 'bold 16px Arial'; g.fillText('ASTU', 64, 185)
+  g.font = '12px Arial'; g.fillText('CEEC', 64, 215)
+  return tex(c, { repeat: false })
+}
+
+// window with vertical security iron bars (for Block 510, photos 145622, 145624)
+export function windowGrilleTex() {
+  const U = 256, W = U * 4, H = 128, [c, g] = canvas(W, H), r = rng(45)
+  const frame = '#5c6840'
+  for (let u = 0; u < 4; u++) {
+    const X = u * U
+    g.fillStyle = frame; g.fillRect(X, 0, U, H)
+    const x0 = X + 6, w = U - 12, y0 = 6, h = H - 12
+    const gr = g.createLinearGradient(0, y0, 0, y0 + h)
+    gr.addColorStop(0, '#283236'); gr.addColorStop(1, '#151c1e')
+    g.fillStyle = gr; g.fillRect(x0, y0, w, h)
+    // vertical security iron bars
+    for (let bx = x0 + 10; bx < x0 + w - 6; bx += 14) {
+      g.fillStyle = '#222628'; g.fillRect(bx, y0, 3.5, h)
+      g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(bx, y0, 1, h)
+    }
+    // horizontal tie bars
+    for (const hy of [y0 + h * 0.3, y0 + h * 0.7]) {
+      g.fillStyle = '#1a1e20'; g.fillRect(x0, hy, w, 3.5)
+    }
+  }
+  grain(g, W, H, 10, r)
+  return tex(c, { repeat: true })
 }
 
 // Roughcast parapet band (band UVs: v = 0 bottom .. 1 top of each wall piece). Beige-grey
