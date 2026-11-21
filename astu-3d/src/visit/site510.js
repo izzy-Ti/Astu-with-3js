@@ -31,10 +31,10 @@ export function buildSite() {
 
     // ================================================== MAIN PAIR · School of Electrical Eng.
     const L = 44, D = 8.5, G = 2.6, W = 6 // W = half-gap between gallery edges
-    // North block (Block 508): front stair at x = 10.8 (world X: -11.2 .. -4.8, closer to 510), projecting South into walkway
-    B.frame(-L / 2, 0, -W - G, 0, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['start'], front: [{ x: 10.8, dx: 1, sign: 'B 508' }] }))
-    // South block (Block 509): front stair at x = 33.2 (world X: -11.2 .. -4.8, closer to 510), projecting North into walkway
-    B.frame(L / 2, 0, W + G, Math.PI, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['end'], front: [{ x: 33.2, dx: -1, sign: 'B 509' }] }))
+    // North block (Block 508): front stair at xl = 8.8 (corridor landing, west), xd = 13.6 (drum, east), projecting South into walkway
+    B.frame(-L / 2, 0, -W - G, 0, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['start'], front: [{ xl: 8.8, xd: 13.6, dx: 1, sign: 'B 508' }] }))
+    // South block (Block 509): front stair at xl = 35.2 (corridor landing, west), xd = 30.4 (drum, east), projecting North into walkway
+    B.frame(L / 2, 0, W + G, Math.PI, () => galleryBlock(B, { len: L, D, G, start: 'round', end: 'round', stone: ['end'], front: [{ xl: 35.2, xd: 30.4, dx: -1, sign: 'B 509' }] }))
     ko(-L / 2 - 3, -W - G - D - 2, L / 2 + 3, W + G + D + 2)
     places.push({ name: 'School of Electrical Engineering · Block 508 (north block)', x: 0, z: -W - G - D / 2, r: 30 })
     places.push({ name: 'School of Electrical Engineering · Block 509 (south block)', x: 0, z: W + G + D / 2, r: 30 })
@@ -43,10 +43,10 @@ export function buildSite() {
     // walkway: central paving + paved margins along the low walls, long raised planters between
     B.add('paving', prism(rectPts(-30, -W, 26, W), 0, 0.05), { collide: true })
     // front stair towers stand at world X = -11.2 .. -4.8 on both sides (bays 3-4 from west stone ends):
-    // planter beds leave a wide generous clear plaza around X = -13.5 .. -4.0
+    // planter beds leave a wide generous clear plaza around X = -17.5 .. -4.0
     const side = {
-      [-1]: { beds: [[-21.0, -13.5], [-4.0, 6.5], [8.5, 18.0]], palms: [-18, -1.0, 4.5, 11.5, 15.5], trees: [-16, 2.0, 14] },
-      [1]: { beds: [[-21.0, -13.5], [-4.0, 6.5], [8.5, 18.0]], palms: [-18, -1.0, 5.0, 11.5, 15.5], trees: [-16, 2.0, 13.8] },
+      [-1]: { beds: [[-22.0, -17.5], [-4.0, 6.5], [8.5, 18.0]], palms: [-20, -1.5, 4.5, 11.5, 15.5], trees: [-21.5, 2.0, 14] },
+      [1]: { beds: [[-22.0, -17.5], [-4.0, 6.5], [8.5, 18.0]], palms: [-20, -1.5, 5.0, 11.5, 15.5], trees: [-21.5, 2.0, 13.8] },
     }
     for (const s of [-1, 1]) {
       const cfg = side[s], zz = s * 3.3
@@ -54,7 +54,7 @@ export function buildSite() {
       cfg.palms.forEach((x, i) => palm(B, x, zz + (i % 2 ? 0.5 : -0.4) * s, { h: 0.5 + (i % 3) * 0.4, fronds: 13, flen: 1.4, trunkR: 0.11, seed: 30 + i + s * 10 }))
       cfg.trees.forEach((x, i) => tree(B, x, zz, { h: 6 + (i % 2), crown: 1.8, kind: i % 2 ? 'round' : 'tulip', seed: 70 + i + s * 5 }))
       shrub(B, s * 9, zz, { s: 0.9, seed: 3 + s })
-      lamp(B, -10.0, s * 1.6, globes) // tall lamp at the stair foot (photo 145543, fix.jpg)
+      lamp(B, -10.5, s * 1.6, globes) // tall lamp at the stair foot (photo 145543, fix.jpg)
       lamp(B, 7.5, s * 1.6, globes) // walkway lamp
     }
     // west entrance: big Canary palm, lamp, cluster of green notice-board stands (145634-145638)

@@ -402,9 +402,9 @@ export function towerSignTex(name = 'B 509') {
   g.fillStyle = '#0f3875'; g.fillRect(0, 0, 128, 256)
   g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.strokeRect(6, 6, 116, 244)
   g.fillStyle = '#ffffff'; g.textAlign = 'center'
-  g.font = 'bold 36px Arial'; g.fillText(name.slice(0, 1), 64, 55)
-  g.font = 'bold 44px Arial'; g.fillText(name.slice(2), 64, 120)
-  g.fillStyle = '#d8bb50'; g.fillRect(20, 145, 88, 5)
+  g.font = 'bold 36px Arial'; g.fillText(name.slice(0, 1), 64, 52)
+  g.font = 'bold 36px Arial'; g.fillText(name.slice(2), 64, 115)
+  g.fillStyle = '#d8bb50'; g.fillRect(20, 142, 88, 5)
   g.fillStyle = '#e8edf6'; g.font = 'bold 16px Arial'; g.fillText('ASTU', 64, 185)
   g.font = '12px Arial'; g.fillText('CEEC', 64, 215)
   return tex(c, { repeat: false })
