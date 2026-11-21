@@ -5,7 +5,7 @@
 // pixel space, then mapped into full.jpg space with a per-zone affine transform (TF below).
 // The same data will drive the 3D build (x -> X, y -> Z, floors -> height).
 
-import detected from './detected.json'
+import detected from './detected.json' with { type: 'json' }
 import { SPORTS, SPORTS_REGION } from './stadium.js'
 
 export const MAP = { width: 925, height: 1255 }
@@ -107,11 +107,12 @@ function B(z, cx, cy, w, h, type = 'block', ang = 0, name) {
 }
 // mark the last building as having a walkable 3D scene (visit.html?site=...)
 function V(site) { buildings[buildings.length - 1].visit = site }
-function Bpoly(z, pts, type, name, holePts) {
-  const n = (counters[z] = (counters[z] || 0) + 1)
+function Bpoly(z, pts, type, name, holePts, forceZone) {
+  const zn = forceZone || z || 5
+  const n = (counters[zn] = (counters[zn] || 0) + 1)
   buildings.push({
-    id: `Z${z}-${String(n).padStart(3, '0')}`,
-    zone: z, type, name, floors: BUILDING_TYPES[type].floors,
+    id: `Z${zn}-${String(n).padStart(3, '0')}`,
+    zone: zn, type, name, floors: BUILDING_TYPES[type].floors,
     poly: mapPts(z, pts), hole: holePts ? mapPts(z, holePts) : null,
   })
 }
@@ -143,54 +144,114 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
 // ===================================== ZONE 5 =================================================
 {
   const z = 5
-  // west dormitory grid (courtyard blocks)
+  // West dormitory grid (courtyard blocks)
   ;[[375,92],[475,128],[345,160],[445,197],[318,228],[420,262],[290,297],[385,335],[290,370],
     [470,372],[380,405],[290,440],[470,445],[470,635],[470,728]].forEach(([x,y]) => B(z, x, y, 75, 45, 'dorm'))
-  // west bar blocks
+  // West bar blocks
   ;[[285,505],[470,508],[285,557],[470,563],[375,587],[285,622],[375,652],[195,648],[195,703],
     [375,705],[280,735]].forEach(([x,y]) => B(z, x, y, 70, 22, 'block'))
   ;[[195,518],[200,588],[225,412],[510,232],[140,672]].forEach(([x,y]) => B(z, x, y, 40, 18, 'staff'))
 
-  // north-east row of small buildings
+  // North-east row of small buildings
   ;[585,625,690,725,760].forEach((x) => B(z, x, 52, 32, 14, 'staff'))
   ;[595,630,665,705,745,785,825,860].forEach((x) => B(z, x, 100 - (x - 595) * 0.083, 32, 14, 'staff'))
-  // academic cluster
+  // Academic lecture cluster
   ;[[600,205,60,45],[668,180,55,40],[735,155,55,42],[670,248,55,42],[738,225,55,42],[805,200,55,40],
     [870,177,55,38],[937,152,55,40]].forEach(([x,y,w,h]) => B(z, x, y, w, h, 'academic'))
-  B(z, 1025, 150, 60, 85, 'hall', 0, 'Large hall (NE corner)')
+  B(z, 1025, 150, 60, 85, 'hall', 0, 'Large lecture hall')
   B(z, 1085, 120, 55, 70, 'hall')
   B(z, 1020, 315, 70, 45, 'hall')
   B(z, 1060, 72, 30, 15, 'staff')
-  // centre
+  // Centre
   B(z, 650, 400, 45, 20); B(z, 710, 467, 55, 25); B(z, 770, 468, 45, 25)
-  B(z, 830, 440, 55, 35, 'academic', -15, 'Block 510 (Python Lab) · LAB 5'); V('b510')
-  B(z, 910, 397, 60, 22, 'academic', -15, 'School of Electrical Eng. · north wing'); V('b510')
-  B(z, 908, 437, 55, 20, 'academic', -15, 'School of Electrical Eng. · south wing'); V('b510')
+
+  // =======================================================================
+  // 3 LOCKED 3D BUILDINGS (exact coordinates & geometry from site510.js)
+  // =======================================================================
+  // 1) EE North Block (4 floors, L=44m, D=11.1m, rotated 15 deg)
+  Bpoly(0, [[421.6, 557.0], [453.1, 548.5], [455.2, 556.5], [423.7, 564.9]], 'academic', 'School of Electrical Eng. · north wing', null, 5); V('b510'); buildings[buildings.length - 1].keep = true
+  // 2) EE South Block (4 floors, L=44m, D=11.1m, rotated 15 deg)
+  Bpoly(0, [[426.0, 573.5], [457.5, 565.1], [459.6, 573.0], [428.1, 581.5]], 'academic', 'School of Electrical Eng. · south wing', null, 5); V('b510'); buildings[buildings.length - 1].keep = true
+  // 3) Block 510 / LAB 5 · U-Block (3 floors, open courtyard facing east)
+  Bpoly(0, [[377.1, 571.4], [405.0, 563.9], [406.4, 568.9], [383.5, 575.0], [386.1, 584.9], [409.0, 578.8], [410.4, 583.8], [382.4, 591.2]], 'academic', 'Block 510 (Python Lab) · LAB 5', null, 5); V('b510'); buildings[buildings.length - 1].keep = true
+
+  // EE Walkway & Outdoor Café Terrace
+  A(0, 'paved', [[417.8, 568.4], [457.9, 557.7], [460.2, 566.2], [420.1, 576.9]], 'Electrical Eng. walkway')
+  A(0, 'paved', [[463.1, 562.9], [479.9, 558.4], [482.7, 569.0], [465.9, 573.5]], 'Café terrace')
+
   B(z, 970, 470, 55, 15); B(z, 1040, 375, 45, 18, 'staff')
-  B(z, 1060, 505, 55, 40, 'academic'); B(z, 1095, 440, 40, 40, 'modern')
+  // ASTU Postgraduate Library & Liberal Library
+  B(z, 1060, 505, 55, 40, 'modern', 0, 'ASTU Postgraduate Library')
+  B(z, 1095, 440, 40, 40, 'glass', 0, 'Liberal Library')
   A(z, 'water', { rect: [1105, 500, 28, 34] }, 'Swimming pool')
-  B(z, 595, 528, 65, 30, 'academic'); B(z, 710, 538, 55, 45, 'academic'); B(z, 825, 520, 55, 45, 'academic')
+
+  B(z, 595, 528, 65, 30, 'academic', 0, 'Block 511 (B511)'); B(z, 710, 538, 55, 45, 'academic'); B(z, 825, 520, 55, 45, 'academic')
   B(z, 910, 497, 55, 15); B(z, 970, 522, 55, 15)
   B(z, 635, 583, 25, 40, 'staff'); B(z, 575, 630, 35, 40, 'staff'); B(z, 632, 685, 25, 40, 'staff')
   B(z, 710, 630, 55, 45, 'academic'); B(z, 590, 735, 65, 30, 'academic'); B(z, 715, 705, 25, 20, 'staff')
   ;[572, 625, 683, 742].forEach((y) => { B(z, 815, y, 55, 30, 'academic'); B(z, 912, y, 55, 30, 'academic') })
-  B(z, 1035, 572, 125, 30, 'hall'); B(z, 1015, 625, 110, 35, 'hall'); B(z, 1018, 685, 115, 45, 'hall')
-  B(z, 1040, 745, 125, 45, 'hall'); B(z, 1040, 805, 120, 35, 'hall')
-  // south-east block
+
+  // 5 Engineering Workshops
+  B(z, 1035, 572, 125, 30, 'hall', 0, 'Engineering Workshop 1')
+  B(z, 1015, 625, 110, 35, 'hall', 0, 'Engineering Workshop 2')
+  B(z, 1018, 685, 115, 45, 'hall', 0, 'Engineering Workshop 3')
+  B(z, 1040, 745, 125, 45, 'hall', 0, 'Engineering Workshop 4')
+  B(z, 1040, 805, 120, 35, 'hall', 0, 'Engineering Workshop 5')
+
+  // South-east block (Courtyard dormitories & Administration)
   B(z, 570, 820, 40, 30, 'staff'); B(z, 630, 820, 40, 30, 'staff')
   ;[[735,835],[840,835],[735,922],[840,925],[730,1008],[840,1012]].forEach(([x,y]) => B(z, x, y, 80, 50, 'dorm'))
   B(z, 920, 1015, 40, 40, 'modern')
-  B(z, 1050, 950, 45, 60, 'academic', 0, 'Round-plaza building')
+  B(z, 1050, 950, 45, 60, 'academic', 0, 'Central Administration')
   A(z, 'park', { ellipse: [1050, 950, 70, 75] }, 'Round plaza')
   B(z, 1090, 850, 25, 25, 'staff')
 
+  // Zone 5 Roads & Detailed Footpaths
   R(z, 'road', [[540,290],[1140,280]], 'Academic Road')
-  R(z, 'road', [[680,775],[680,1040]])
+  R(z, 'road', [[680,775],[680,1040]], 'South Academic Access')
+  R(z, 'lane', [[275, 480], [350, 450], [420, 420], [540, 410]], 'Academic North Curve')
+  A(z, 'park', { ellipse: [740, 310, 28, 28] }, 'Academic plaza')
+  R(z, 'lane', ellipsePts(740, 310, 32, 32, 24))
+
+  // Interconnecting paths in West Dorms (connecting all 15 blocks)
+  R(z, 'path', [[290, 80], [290, 740]])
+  R(z, 'path', [[380, 80], [380, 740]])
+  R(z, 'path', [[470, 80], [470, 740]])
+  R(z, 'path', [[260, 220], [500, 220]])
+  R(z, 'path', [[260, 350], [500, 350]])
+  R(z, 'path', [[260, 480], [500, 480]])
+  R(z, 'path', [[260, 600], [500, 600]])
+
+  // Paths in Academic Core & Workshops
+  R(0, 'path', [[405, 575], [418, 573]]) // Block 510 to EE walkway
+  R(0, 'path', [[460, 565], [495, 550], [538, 550]]) // EE to Postgraduate Library
+  R(0, 'path', [[495, 550], [505, 595]]) // Library to Liberal library
+  R(0, 'path', [[320, 540], [377, 575]]) // B511 to Block 510
   R(z, 'path', [[600,140],[640,270],[900,250],[960,200]])
   R(z, 'path', [[560,360],[940,350],[1000,270]])
+  R(z, 'path', [[815, 550], [815, 780]])
+  R(z, 'path', [[912, 550], [912, 780]])
+  R(z, 'path', [[750, 600], [1050, 600]])
+  R(z, 'path', [[750, 660], [1050, 660]])
+  R(z, 'path', [[750, 720], [1050, 720]])
+  R(z, 'path', [[750, 780], [1050, 780]])
+  R(z, 'path', [[680, 880], [900, 880]])
+  R(z, 'path', [[680, 960], [900, 960]])
 
-  L(z, 'Academic core', [800, 330])
-  L(z, 'Dorm grid (west)', [380, 470])
+  L(0, 'Block 510 (Python Lab)', [395, 560], 'academic')
+  L(0, 'LAB 5', [385, 595], 'academic')
+  L(0, 'School of Electrical Eng.', [440, 545], 'academic')
+  L(0, 'Block 511 (B511)', [305, 525], 'academic')
+  L(0, 'Block 514', [240, 520], 'academic')
+  L(0, 'Libos Dormitory', [200, 590], 'dorm')
+  L(0, 'Astu Boys Dorm B507', [230, 420], 'dorm')
+  L(0, 'ASTU Postgraduate Library', [495, 530], 'library')
+  L(0, 'Liberal Library', [505, 600], 'library')
+  L(0, 'Academic Core', [400, 470], 'academic')
+  L(0, 'Dorm grid (west)', [180, 500], 'dorm')
+  L(0, 'Engineering Workshops', [480, 700], 'workshop')
+  L(0, 'Swimming Pool', [520, 598], 'sport')
+  L(0, 'Central Administration', [500, 795], 'admin')
 }
 
 // ===================================== ZONE 4 =================================================
@@ -200,14 +261,25 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
     [230,225,60,25,0],[300,258,60,25,25],[445,85,60,25,0],[510,128,65,25,0]]
     .forEach(([x,y,w,h,a]) => B(z, x, y, w, h, 'block', a))
   B(z, 100, 268, 30, 25, 'staff')
-  Tri(z, 180, 300, 58, 0); Tri(z, 75, 365, 55, 180); Tri(z, 270, 345, 48, 0); Tri(z, 262, 465, 48, 180)
-  B(z, 100, 465, 90, 40, 'academicC'); B(z, 85, 512, 70, 30, 'academic')
+
+  // Realistic sawtooth / ridge classroom clusters
+  Bpoly(z, rectPts(180, 300, 75, 45, 0), 'tri', 'Classroom Cluster A', rectPts(180, 300, 35, 18, 0))
+  Bpoly(z, rectPts(75, 365, 75, 45, 0), 'tri', 'Classroom Cluster B', rectPts(75, 365, 35, 18, 0))
+  Bpoly(z, rectPts(270, 345, 70, 42, 0), 'tri', 'Classroom Cluster C', rectPts(270, 345, 32, 16, 0))
+  Bpoly(z, rectPts(262, 465, 70, 42, 0), 'tri', 'Classroom Cluster D', rectPts(262, 465, 32, 16, 0))
+
+  // ASTU Female Library & Students Lounge & Amphitheatre
+  B(z, 90, 430, 65, 45, 'academic', 0, 'ASTU Female Library')
+  B(z, 90, 370, 50, 30, 'academic', 0, 'Students Lounge')
+  A(z, 'concrete', { ellipse: [90, 495, 38, 28] }, 'Amphitheatre bowl')
+  Bpoly(z, rectPts(90, 480, 40, 16, 0), 'academic', 'ASTU Amphitheatre Stage')
+
   ;[[165,605,80,25],[165,640,80,20],[240,600,50,25],[240,640,50,20],[315,605,60,25],[165,672,80,20],
     [240,685,60,35],[180,702,60,20],[310,712,35,30]].forEach(([x,y,w,h]) => B(z, x, y, w, h, 'academic'))
   B(z, 110, 690, 25, 25, 'staff'); B(z, 210, 760, 80, 40, 'academicC')
   B(z, 450, 835, 85, 50, 'academicC', 0, 'Courtyard building (green court)')
 
-  // stadium
+  // Stadium concourse & features
   A(z, 'paved', { ellipse: [715, 335, 122, 188] }, 'Stadium stands')
   A(z, 'track', { ellipse: [715, 335, 102, 165] }, 'Running track')
   A(z, 'pitch', { ellipse: [715, 335, 72, 122] }, 'Football pitch')
@@ -215,16 +287,18 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
   A(z, 'arena', { rect: [493, 270, 70, 70] }, 'Dirt court')
   A(z, 'court', { rect: [445, 402, 62, 85] }, 'Sports court A')
   A(z, 'court', { rect: [505, 402, 55, 85] }, 'Sports court B')
+  A(z, 'paved', [[600, 40], [780, 40], [780, 140], [600, 140]], 'Stadium Parking')
+  R(z, 'lane', [[610, 90], [770, 90]])
   R(z, 'path', ellipsePts(715, 335, 140, 205, 40).concat([ellipsePts(715, 335, 140, 205, 40)[0]]))
 
-  // scattered staff housing (east)
+  // Scattered staff housing (east)
   ;[[600,585,20,40,0],[600,645,55,20,0],[660,645,40,18,0],[560,690,25,40,0],
     [665,735,45,18,-45],[570,760,30,30,0],[550,810,30,25,0],[595,830,45,18,40],[650,835,45,18,40],
     [680,815,45,18,40]].forEach(([x,y,w,h,a]) => B(z, x, y, w, h, 'block', a))
   A(z, 'water', { rect: [815, 692, 30, 20] }, 'Pool')
   B(z, 795, 742, 40, 30, 'staff'); B(z, 825, 790, 40, 30, 'staff'); B(z, 830, 855, 40, 30, 'staff')
 
-  // south strip
+  // South strip
   B(z, 330, 975, 65, 30, 'academic'); B(z, 430, 965, 85, 35, 'academic'); B(z, 430, 940, 30, 15, 'staff')
   B(z, 265, 1035, 40, 30); B(z, 325, 1035, 40, 30); B(z, 390, 1035, 55, 25); B(z, 475, 1035, 55, 25, 'academic')
   B(z, 565, 1027, 55, 25, 'hall')
@@ -236,10 +310,26 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
   R(z, 'road', [[520,900],[525,1220]])
   R(z, 'road', [[735,520],[735,1220]])
   R(z, 'road', [[230,900],[235,1220]])
-  R(z, 'path', [[400,540],[530,540],[590,520]])
 
-  L(z, 'ASTU Stadium', [715, 335], 'sport')
-  L(z, 'Triangle clusters', [170, 400])
+  // Zone 4 Extensive Footpaths
+  R(z, 'path', [[20, 350], [180, 300], [270, 345], [380, 340]])
+  R(z, 'path', [[20, 465], [100, 465], [180, 480], [262, 465], [380, 460]])
+  R(z, 'path', [[380, 340], [445, 402], [600, 340]])
+  R(z, 'path', [[380, 460], [505, 402], [600, 400]])
+  R(z, 'path', [[400,540],[530,540],[590,520]])
+  R(z, 'path', [[550, 640], [700, 640]])
+  R(z, 'path', [[550, 740], [700, 740]])
+  R(z, 'path', [[550, 830], [700, 830]])
+  R(z, 'path', [[630, 600], [630, 860]])
+
+  L(0, 'ASTU Stadium', [715, 475], 'sport')
+  L(0, 'ASTU Gym', [685, 470], 'sport')
+  L(0, 'KT Tennis Court', [705, 440], 'sport')
+  L(0, 'Basketball Courts', [720, 445], 'sport')
+  L(0, 'ASTU Female Library', [575, 505], 'library')
+  L(0, 'ASTU Amphitheatre', [575, 535], 'landmark')
+  L(0, 'Students Lounge', [570, 460], 'landmark')
+  L(0, 'Classroom Clusters', [630, 470], 'academic')
 }
 
 // ===================================== ZONE 1 =================================================
@@ -251,80 +341,104 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
   ;[527,633,740,845].forEach((x, i) => B(z, x, 365 + i * 2, 70, 40, 'block'))
   B(z, 145, 462, 40, 25, 'staff'); B(z, 190, 470, 20, 25, 'staff'); B(z, 165, 512, 40, 15, 'staff')
   B(z, 1025, 585, 70, 30, 'block'); B(z, 1105, 610, 25, 25, 'staff')
-  B(z, 890, 692, 120, 22, 'hall', 20, 'Long shed'); B(z, 865, 748, 110, 18, 'hall', 20)
+  B(z, 890, 692, 120, 22, 'hall', 20, 'Long shed 1'); B(z, 865, 748, 110, 18, 'hall', 20, 'Long shed 2')
 
   A(z, 'farm', [[760,770],[1030,820],[985,1050],[715,1000]], 'Demonstration farm plots', { grid: [4, 4] })
   A(z, 'farm', [[60,535],[300,560],[295,800],[30,770]], 'Farm field', { grid: [2, 3] })
+  A(z, 'paved', { ellipse: [470, 920, 35, 35] }, 'West Gate Plaza')
+  B(z, 470, 920, 16, 12, 'staff', 0, 'West Gate Security Post')
 
   R(z, 'road', [[385,20],[385,405]])
   R(z, 'main', [[690,425],[640,560],[470,900]], 'West Gate Avenue')
   R(z, 'path', [[860,440],[700,1000]])
   R(z, 'path', [[400,30],[230,120],[200,300],[380,330]])
+  R(z, 'path', [[450, 150], [850, 150]])
+  R(z, 'path', [[450, 230], [850, 230]])
+  R(z, 'path', [[450, 310], [850, 310]])
+  R(z, 'path', [[580, 80], [580, 380]])
+  R(z, 'path', [[720, 80], [720, 380]])
 
-  L(z, 'West Gate', [470, 900], 'gate')
-  L(z, 'Farm plots', [870, 910], 'nature')
+  L(0, 'West Gate', [145, 980], 'gate')
+  L(0, 'Agricultural Farm', [260, 960], 'nature')
+  L(0, 'South-West Dorms', [190, 740], 'dorm')
 }
 
 // ===================================== ZONE 2 =================================================
 {
   const z = 2
-  A(z, 'pond', [[100,610],[140,540],[290,480],[302,520],[240,580],[225,630],[320,700],[310,735],[200,705],[110,665]], 'Pond')
+  A(z, 'pond', [[100,610],[140,540],[290,480],[302,520],[240,580],[225,630],[320,700],[310,735],[200,705],[110,665]], 'Natural Pond')
   A(z, 'sand', { ellipse: [585, 190, 85, 110] }, 'Dirt track field')
   R(z, 'path', ellipsePts(585, 190, 100, 125, 36).concat([ellipsePts(585, 190, 100, 125, 36)[0]]), 'Dirt loop')
   A(z, 'farm', [[690,90],[840,80],[845,670],[690,670]], 'Orchard', { grid: [2, 8] })
   A(z, 'sand', [[600,720],[770,720],[780,920],[600,900]], 'Open sand lot')
   A(z, 'farm', [[420,825],[520,840],[510,890],[415,875]], 'Plots', { grid: [4, 1] })
-  A(z, 'park', [[790,720],[870,720],[880,960],[800,950]], 'Garden')
+  A(z, 'park', [[790,720],[870,720],[880,960],[800,950]], 'Botanical Garden')
   B(z, 680, 945, 40, 25, 'staff'); B(z, 720, 995, 35, 20, 'staff')
 
   R(z, 'road', [[325,15],[320,500],[350,650],[400,700],[880,700]])
   R(z, 'path', [[775,80],[770,650]])
   R(z, 'path', [[330,260],[480,230]])
+  R(z, 'path', [[110, 675], [190, 715], [300, 745], [330, 705], [250, 635], [250, 585], [310, 525], [300, 475], [140, 530]], 'Lakeside Walking Trail')
+  R(z, 'path', [[800, 740], [850, 780], [820, 840], [860, 900], [820, 940]], 'Botanical Garden Trail')
 
-  L(z, 'Pond', [200, 600], 'nature')
+  L(0, 'Natural Pond', [350, 1060], 'nature')
+  L(0, 'Orchard & Botanical Garden', [520, 1080], 'nature')
+  L(0, 'Dirt Training Track', [455, 890], 'sport')
 }
 
 // ===================================== ZONE 3 =================================================
 {
   const z = 3
-  Bpoly(z, [[72,300],[115,300],[215,472],[72,452]], 'glass', 'Blue triangular hall')
+  Bpoly(z, [[72,300],[115,300],[215,472],[72,452]], 'glass', 'Blue triangular exhibition hall')
   B(z, 155, 288, 150, 22, 'block')
   A(z, 'park', [[40,30],[270,30],[270,230],[40,230]], 'Formal garden')
-  A(z, 'water', { rect: [145, 248, 30, 15] }, 'Pool')
+  A(z, 'water', { rect: [145, 248, 30, 15] }, 'Reflection pool')
 
   A(z, 'paved', [[710,58],[1118,58],[1118,545],[710,545]], 'Walled compound')
-  A(z, 'park', [[870,300],[975,300],[975,392],[870,392]], 'Compound garden')
-  A(z, 'water', { ellipse: [912, 340, 17, 17, 20] }, 'Fountain')
-  B(z, 840, 200, 145, 165, 'modern', 0, 'Compound main block')
+  A(z, 'park', [[870,300],[975,300],[975,392],[870,392]], 'Compound formal garden')
+  A(z, 'water', { ellipse: [912, 340, 18, 18, 20] }, 'Central fountain')
+  B(z, 840, 200, 145, 165, 'modern', 0, 'Compound main complex')
   B(z, 855, 410, 140, 160, 'modern', 0, 'Compound south block')
   B(z, 968, 152, 55, 55, 'modern'); B(z, 1052, 150, 55, 55, 'modern'); B(z, 1052, 228, 55, 55, 'modern')
   B(z, 1040, 312, 80, 70, 'academic'); B(z, 1032, 442, 80, 80, 'academic')
 
   B(z, 565, 428, 45, 50, 'hall'); B(z, 620, 300, 15, 30, 'staff'); B(z, 568, 82, 25, 15, 'staff')
   B(z, 380, 925, 60, 40, 'staff')
+  B(z, 915, 545, 18, 12, 'staff', 0, 'Compound Gatehouse')
 
   A(z, 'field', [[150,615],[330,615],[345,1010],[150,990]], 'Dry field')
   A(z, 'field', [[360,615],[710,610],[715,990],[355,1000]], 'Dry field')
   A(z, 'field', [[730,610],[1030,605],[980,960],[740,990]], 'Dry field')
   A(z, 'park', [[40,620],[150,620],[150,850],[40,850]], 'Gate garden')
-  A(z, 'paved', { ellipse: [85, 915, 38, 38, 24] }, 'Gate roundabout')
+  A(z, 'paved', { ellipse: [85, 915, 40, 40, 24] }, 'Gate roundabout')
+  A(z, 'park', { ellipse: [85, 915, 22, 22, 24] }, 'Gate garden island')
+  B(z, 85, 950, 16, 12, 'staff', 0, 'Main Gate Security Post')
 
   R(z, 'road', [[40,598],[1000,592]], 'South Road')
-  R(z, 'road', [[720,520],[1110,520]]); R(z, 'road', [[930,60],[930,290]])
+  R(z, 'road', [[720,520],[1110,520]])
+  R(z, 'road', [[740, 80], [1090, 80], [1090, 520], [740, 520], [740, 80]], 'Compound Perimeter Drive')
+  R(z, 'road', [[930,60],[930,290]])
   R(z, 'road', [[960,545],[960,592]])
   R(z, 'road', [[285,30],[285,598]])
   R(z, 'path', [[600,40],[620,598]])
+  R(z, 'path', [[40, 130], [270, 130]])
+  R(z, 'path', [[155, 30], [155, 230]])
+  R(z, 'path', [[912, 300], [912, 380]])
+  R(z, 'path', [[870, 340], [955, 340]])
+  R(z, 'path', [[880, 310], [944, 370]])
+  R(z, 'path', [[880, 370], [944, 310]])
   R(z, 'path', [[350,1060],[600,980],[940,930]], 'Ravine track')
 
-  L(z, 'Main Gate', [85, 915], 'gate')
-  L(z, 'Blue hall', [140, 400])
-  L(z, 'New compound', [915, 300])
+  L(0, 'Main Gate', [570, 1145], 'gate')
+  L(0, 'Research & Innovation Compound', [850, 940], 'landmark')
+  L(0, 'Blue Triangular Hall', [590, 970], 'landmark')
+  L(0, 'Formal Garden', [590, 890], 'nature')
 }
 
 // ===================================== ZONE 6 =================================================
 {
   const z = 6
-  B(z, 295, 465, 110, 28, 'academic', 45, 'North academic block')
+  B(z, 295, 465, 110, 28, 'academic', 45, 'North Academic Block')
   B(z, 325, 400, 40, 45, 'academic'); B(z, 345, 455, 45, 40, 'academic'); B(z, 372, 485, 35, 30, 'academic')
   B(z, 300, 425, 30, 20, 'staff')
   B(z, 240, 310, 12, 50, 'staff'); B(z, 225, 350, 12, 30, 'staff'); B(z, 245, 560, 30, 10, 'staff')
@@ -332,26 +446,32 @@ R(0, 'road', [[633,321],[640,335],[908,328]], 'Zone 4 North Road')
   A(z, 'sand', { ellipse: [130, 635, 58, 24] }, 'Track infield')
   B(z, 245, 662, 45, 30, 'block'); B(z, 295, 658, 45, 30, 'block'); B(z, 350, 655, 45, 30, 'block')
 
+  // 7 North Courtyard Dorms in 2 columns
   ;[395,450,505].forEach((y) => B(z, 1115, y, 62, 34, 'dorm'))
   ;[370,425,482,538].forEach((y) => B(z, 1190, y, 62, 34, 'dorm'))
   B(z, 1095, 355, 15, 15, 'staff'); B(z, 1200, 572, 15, 12, 'staff')
 
-  A(z, 'water', { ellipse: [605, 380, 12, 12, 16] }, 'Water tank')
-  A(z, 'water', { ellipse: [525, 515, 10, 10, 16] }, 'Water tank')
+  A(z, 'concrete', { ellipse: [605, 380, 16, 16, 16] }, 'Water reservoir tank 1')
+  A(z, 'concrete', { ellipse: [525, 515, 14, 14, 16] }, 'Water reservoir tank 2')
   A(z, 'water', { ellipse: [540, 535, 10, 10, 16] }, 'Water tank')
-  A(z, 'gravel', { ellipse: [800, 440, 65, 42] }, 'Quarry / gravel pit')
+  A(z, 'gravel', { ellipse: [800, 440, 75, 50] }, 'Quarry & gravel pit')
   A(z, 'gravel', { ellipse: [890, 120, 40, 45] }, 'Construction yard')
   B(z, 1005, 128, 35, 18, 'staff'); B(z, 1070, 110, 45, 12, 'staff')
 
+  R(z, 'road', [[180, 680], [220, 600], [260, 500], [380, 380], [520, 260], [700, 220], [850, 220]], 'Hillside Mountain Road')
   R(z, 'road', [[395,670],[470,520],[550,365],[700,338]], 'Forest loop road')
   R(z, 'road', [[850,330],[1230,325]], 'North-East road')
+  R(z, 'lane', [[1000, 330], [1220, 330], [1220, 640], [1000, 640], [1000, 330]], 'North Dorms Access Loop')
+  R(z, 'path', [[1105, 330], [1105, 640]], 'North Dorms Central Walkway')
   R(z, 'path', [[190,255],[840,255]], 'Boundary track')
   R(z, 'path', [[220,600],[400,600]])
   R(z, 'path', [[960,180],[1100,160],[1180,250]])
 
-  L(z, 'Forest', [520, 330], 'nature')
-  L(z, 'North dorms', [1150, 330])
-  L(z, 'Quarry', [800, 440])
+  L(0, 'North Dormitories', [800, 245], 'dorm')
+  L(0, 'North Academic Block', [345, 270], 'academic')
+  L(0, 'Water Reservoirs', [420, 220], 'utility')
+  L(0, 'Quarry', [560, 85], 'nature')
+  L(0, 'Forest Reserve', [475, 190], 'nature')
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -423,7 +543,7 @@ function polyArea(p) {
 }
 const inBB = ([x, y], bb, pad = 0) => x >= bb[0] - pad && x <= bb[2] + pad && y >= bb[1] - pad && y <= bb[3] + pad
 
-const specials = manual.filter((m) => SPECIAL.has(m.type) || m.keep)
+const specials = manual.filter((m) => SPECIAL.has(m.type) || m.keep || m.visit)
 const ACADEMIC_ZONE = [[280, 400], [540, 400], [540, 720], [280, 720]] // zone 5 east half
 
 const detectedB = []
@@ -431,7 +551,7 @@ for (const d of detected.buildings) {
   const bb = bbox(d.poly)
   if (specials.some((s) => inBB(d.center, s.bb, 2))) continue
   const area = polyArea(d.poly) - (d.hole ? polyArea(d.hole) : 0)
-  const match = manual.find((m) => !SPECIAL.has(m.type) && !m.keep && (inBB(m.c, bb, 1) || inBB(d.center, m.bb, 1)))
+  const match = manual.find((m) => !SPECIAL.has(m.type) && !m.keep && !m.visit && (inBB(m.c, bb, 2) || inBB(d.center, m.bb, 2)))
   let type
   if (d.color === 'red') type = 'dormRed'
   else if (match && match.type !== 'tri') type = match.type
@@ -445,11 +565,37 @@ for (const d of detected.buildings) {
   let floors = t.floors
   if (type === 'staff') floors = 1
   else if (area > 1500 && type !== 'hall') floors += 1
-  detectedB.push({ zone: d.zone, type, name: match?.name, visit: match?.visit, floors, poly: d.poly, hole: d.hole, roofColor: d.roofColor, bb, matched: match })
+
+  if (match) {
+    detectedB.push({
+      zone: match.zone,
+      type: match.type,
+      name: match.name,
+      visit: match.visit,
+      floors: match.floors || floors,
+      poly: match.poly,
+      hole: match.hole,
+      roofColor: d.roofColor,
+      bb: match.bb,
+      matched: match,
+    })
+  } else if (area >= 35 && area <= 3500) {
+    detectedB.push({
+      zone: d.zone,
+      type,
+      name: null,
+      visit: null,
+      floors,
+      poly: d.poly,
+      hole: d.hole,
+      roofColor: d.roofColor,
+      bb,
+      matched: null,
+    })
+  }
 }
 const usedManual = new Set(detectedB.map((d) => d.matched).filter(Boolean))
-const fallback = manual.filter((m) => !SPECIAL.has(m.type) && !m.keep && !usedManual.has(m) &&
-  !detectedB.some((d) => inBB(m.c, d.bb, 2) || inBB(centroidOf(d.poly), m.bb, 2)))
+const fallback = manual.filter((m) => !SPECIAL.has(m.type) && !m.keep && !m.visit && !usedManual.has(m))
 
 const zoneCount = {}
 for (const b of [...specials, ...detectedB, ...fallback].sort((a, b) => a.zone - b.zone || centroidOf(a.poly)[1] - centroidOf(b.poly)[1])) {

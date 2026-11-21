@@ -712,7 +712,11 @@ export function createMap(container, campus, cb = {}) {
     g.fillText(text, x + (opt.dot ? 4 : 0), y + 0.5)
   }
 
-  const LABEL_DOT = { landmark: '#f0b429', gate: '#ff6b6b', sport: '#5fa8d3', nature: '#7fb069' }
+  const LABEL_DOT = {
+    landmark: '#f0b429', gate: '#ff6b6b', sport: '#5fa8d3', nature: '#7fb069',
+    academic: '#4dabf7', dorm: '#ff922b', library: '#cc5de8', workshop: '#20c997',
+    admin: '#f08c00', utility: '#845ef7',
+  }
   function drawLabels(g, s) {
     if (s < 1.6) {
       for (const z of campus.zones) {
