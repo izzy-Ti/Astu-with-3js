@@ -54,7 +54,7 @@ export function buildSite() {
       cfg.palms.forEach((x, i) => palm(B, x, zz + (i % 2 ? 0.5 : -0.4) * s, { h: 0.5 + (i % 3) * 0.4, fronds: 13, flen: 1.4, trunkR: 0.11, seed: 30 + i + s * 10 }))
       cfg.trees.forEach((x, i) => tree(B, x, zz, { h: 6 + (i % 2), crown: 1.8, kind: i % 2 ? 'round' : 'tulip', seed: 70 + i + s * 5 }))
       shrub(B, s * 9, zz, { s: 0.9, seed: 3 + s })
-      lamp(B, -9.5, s * 1.6, globes) // tall lamp at the stair foot (photo 145543)
+      lamp(B, -10.0, s * 1.6, globes) // tall lamp at the stair foot (photo 145543, fix.jpg)
       lamp(B, 7.5, s * 1.6, globes) // walkway lamp
     }
     // west entrance: big Canary palm, lamp, cluster of green notice-board stands (145634-145638)
