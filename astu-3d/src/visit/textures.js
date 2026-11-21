@@ -103,57 +103,63 @@ export function stoneTex(seed = 3) {
 }
 
 // stone flag paving of the walkways: warm grey-beige slabs in running bond, dirt in the joints,
-// worn and stained (photos 145640-145649). One tile = 3 m.
+// worn and stained (photos 145640-145649, floor_510_full.jpg). One tile = 3 m.
 export function pavingTex(seed = 4) {
   const S = 512, [c, g] = canvas(S), r = rng(seed)
-  g.fillStyle = '#484338'; g.fillRect(0, 0, S, S)
-  const rows = 8, rh = S / rows, cols = 8, cw = S / cols
+  g.fillStyle = '#443f36'; g.fillRect(0, 0, S, S) // deep recessed joint gap
+  const rows = 4, rh = S / rows, cols = 4, cw = S / cols // large square paving flags matching photos
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
       const x = i * cw, y = j * rh
       const t = 0.88 + r() * 0.22, warm = (r() - 0.5) * 8
-      g.fillStyle = `rgb(${[184 * t + warm, 172 * t, 150 * t - warm].map(Math.round)})`
-      g.fillRect(x + 2, y + 2, cw - 4, rh - 4)
-      // bevel highlights
-      g.fillStyle = 'rgba(255,250,235,0.22)'; g.fillRect(x + 2, y + 2, cw - 4, 1.5); g.fillRect(x + 2, y + 2, 1.5, rh - 4)
-      g.fillStyle = 'rgba(40,35,28,0.25)'; g.fillRect(x + 2, y + rh - 3.5, cw - 4, 1.5); g.fillRect(x + cw - 3.5, y + 2, 1.5, rh - 4)
-      if (r() < 0.15) { // hairline crack
-        g.strokeStyle = 'rgba(60,50,40,0.4)'; g.lineWidth = 1; g.beginPath()
-        let cx = x + 6 + r() * (cw - 12), cy = y + 3; g.moveTo(cx, cy)
-        for (let k = 0; k < 5; k++) { cx += (r() - 0.5) * 14; cy += rh / 6; g.lineTo(cx, cy) }
+      g.fillStyle = `rgb(${[186 * t + warm, 174 * t, 152 * t - warm].map(Math.round)})`
+      g.fillRect(x + 3, y + 3, cw - 6, rh - 6)
+      // chamfered bevel highlights
+      g.fillStyle = 'rgba(255,250,235,0.32)'; g.fillRect(x + 3, y + 3, cw - 6, 2.5); g.fillRect(x + 3, y + 3, 2.5, rh - 6)
+      g.fillStyle = 'rgba(35,30,24,0.35)'; g.fillRect(x + 3, y + rh - 5.5, cw - 6, 2.5); g.fillRect(x + cw - 5.5, y + 3, 2.5, rh - 6)
+      // surface mottling & stone texture
+      for (let k = 0; k < 18; k++) {
+        g.fillStyle = `rgba(${r() < 0.5 ? '245,238,220' : '90,80,68'},${0.06 + r() * 0.12})`
+        g.fillRect(x + 4 + r() * (cw - 12), y + 4 + r() * (rh - 12), 2 + r() * 8, 1 + r() * 4)
+      }
+      if (r() < 0.2) { // fine hairline weather crack
+        g.strokeStyle = 'rgba(55,45,35,0.45)'; g.lineWidth = 1; g.beginPath()
+        let cx = x + 8 + r() * (cw - 16), cy = y + 4; g.moveTo(cx, cy)
+        for (let k = 0; k < 6; k++) { cx += (r() - 0.5) * 16; cy += rh / 7; g.lineTo(cx, cy) }
         g.stroke()
       }
     }
   }
-  blotches(g, S, S, 60, r, ['95,82,62', '215,203,178', '125,108,80', '70,66,58'], 12, 80, 0.15)
+  blotches(g, S, S, 50, r, ['95,82,62', '220,210,185', '125,108,80', '65,60,52'], 16, 90, 0.14)
   grain(g, S, S, 18, r)
   return tex(c)
 }
 
 // gallery corridor & stair landing floor tile: light terrazzo/concrete square tiles with joint grid
+// matching photos 145456, 145543 and walk_full_res.jpg
 export function corridorTileTex(seed = 18) {
   const S = 512, [c, g] = canvas(S), r = rng(seed)
-  g.fillStyle = '#655e52'; g.fillRect(0, 0, S, S) // dark grout joints
+  g.fillStyle = '#524b42'; g.fillRect(0, 0, S, S) // dark grout joints
   const tiles = 8, ts = S / tiles
   for (let y = 0; y < tiles; y++) {
     for (let x = 0; x < tiles; x++) {
-      const x0 = x * ts + 2, y0 = y * ts + 2, tw = ts - 4, th = ts - 4
-      const t = 0.92 + r() * 0.16
-      g.fillStyle = `rgb(${[202 * t, 192 * t, 172 * t].map(Math.round)})`
+      const x0 = x * ts + 2.5, y0 = y * ts + 2.5, tw = ts - 5, th = ts - 5
+      const t = 0.93 + r() * 0.14, warm = (r() - 0.5) * 6
+      g.fillStyle = `rgb(${[205 * t + warm, 196 * t, 178 * t - warm].map(Math.round)})`
       g.fillRect(x0, y0, tw, th)
-      // terrazzo chips
-      for (let k = 0; k < 28; k++) {
-        const chipCol = r() < 0.4 ? 'rgba(70,65,58,0.35)' : r() < 0.7 ? 'rgba(255,255,245,0.45)' : 'rgba(160,140,110,0.3)'
+      // terrazzo chips: cream, dark grey and ochre
+      for (let k = 0; k < 36; k++) {
+        const chipCol = r() < 0.35 ? 'rgba(65,60,52,0.42)' : r() < 0.72 ? 'rgba(255,255,248,0.55)' : 'rgba(175,145,105,0.35)'
         g.fillStyle = chipCol
-        g.fillRect(x0 + 2 + r() * (tw - 4), y0 + 2 + r() * (th - 4), 1 + r() * 2.5, 1 + r() * 2)
+        g.fillRect(x0 + 2 + r() * (tw - 5), y0 + 2 + r() * (th - 5), 1 + r() * 2.5, 1 + r() * 2)
       }
-      // light edge bevel
-      g.fillStyle = 'rgba(255,252,240,0.28)'; g.fillRect(x0, y0, tw, 1.5); g.fillRect(x0, y0, 1.5, th)
-      g.fillStyle = 'rgba(40,36,30,0.22)'; g.fillRect(x0, y0 + th - 1.5, tw, 1.5); g.fillRect(x0 + tw - 1.5, y0, 1.5, th)
+      // light edge bevels
+      g.fillStyle = 'rgba(255,252,242,0.35)'; g.fillRect(x0, y0, tw, 1.8); g.fillRect(x0, y0, 1.8, th)
+      g.fillStyle = 'rgba(38,32,25,0.28)'; g.fillRect(x0, y0 + th - 1.8, tw, 1.8); g.fillRect(x0 + tw - 1.8, y0, 1.8, th)
     }
   }
-  blotches(g, S, S, 40, r, ['140,130,115', '230,222,205'], 20, 90, 0.1)
-  grain(g, S, S, 14, r)
+  blotches(g, S, S, 35, r, ['145,135,118', '235,228,212'], 24, 100, 0.09)
+  grain(g, S, S, 12, r)
   return tex(c)
 }
 
@@ -243,65 +249,122 @@ export function windowTex() {
   return tex(c, { repeat: true })
 }
 
-// classroom door (photos 113643, 145547): tall frame, two worn brown timber leaves, glazed
-// transom with louvres. 1.3 m x 2.85 m.
+// classroom door (photos 113643, 145547, door_full_res.jpg): tall concrete frame,
+// unequal double wooden leaves with authentic diagonal chevron panel battens, glazed
+// transom with horizontal louvres and taped notice. 1.3 m x 2.85 m.
 export function doorTex(seed = 9) {
   const W = 256, H = 512, [c, g] = canvas(W, H), r = rng(seed)
-  g.fillStyle = '#d9b651'; g.fillRect(0, 0, W, H) // frame, same yellow as the wall
-  // frame inner shadow
-  g.fillStyle = 'rgba(40,32,15,0.4)'; g.fillRect(10, 10, W - 20, H - 10)
-  // transom (y: 12..120)
-  g.fillStyle = '#556238'; g.fillRect(12, 12, W - 24, 110)
-  const tw = (W - 32) / 2
+  g.fillStyle = '#d9b651'; g.fillRect(0, 0, W, H) // concrete frame, same warm yellow as gallery wall
+  // frame inner shadow / reveal
+  g.fillStyle = 'rgba(35,28,15,0.45)'; g.fillRect(10, 10, W - 20, H - 10)
+
+  // transom (y: 12..124): split into unequal panes matching the door leaves below
+  g.fillStyle = '#4f5c35'; g.fillRect(12, 12, W - 24, 112)
+  const tw1 = Math.round((W - 32) * 0.60), tw2 = (W - 32) - tw1
+  const panes = [[14, tw1 - 2], [14 + tw1 + 2, tw2]]
   for (let i = 0; i < 2; i++) {
-    const tx = 16 + i * (tw + 4)
-    const gr = g.createLinearGradient(0, 16, 0, 118); gr.addColorStop(0, '#3a474b'); gr.addColorStop(1, '#1b2123')
-    g.fillStyle = gr; g.fillRect(tx, 16, tw - 4, 102)
-    // louver blades
-    for (let ly = 24; ly < 114; ly += 16) {
-      g.fillStyle = 'rgba(210,225,230,0.3)'; g.fillRect(tx + 2, ly, tw - 8, 4)
-      g.fillStyle = 'rgba(10,15,20,0.5)'; g.fillRect(tx + 2, ly + 4, tw - 8, 3)
+    const [tx, tw] = panes[i]
+    const gr = g.createLinearGradient(0, 14, 0, 122); gr.addColorStop(0, '#354345'); gr.addColorStop(0.6, '#182022'); gr.addColorStop(1, '#232a2c')
+    g.fillStyle = gr; g.fillRect(tx, 14, tw, 108)
+    // horizontal glass louver slats catching ambient sky reflection
+    for (let ly = 22; ly < 120; ly += 15) {
+      g.fillStyle = 'rgba(215,230,235,0.32)'; g.fillRect(tx + 2, ly, tw - 4, 3.5)
+      g.fillStyle = 'rgba(8,12,16,0.55)'; g.fillRect(tx + 2, ly + 3.5, tw - 4, 2.5)
     }
   }
-  // taped white notice paper in transom
-  g.fillStyle = '#f2efe6'; g.fillRect(80, 42, 60, 44)
-  g.fillStyle = 'rgba(40,40,40,0.7)'; for (let y = 50; y < 80; y += 7) g.fillRect(86, y, 48, 2.5)
-  // wooden door leaves (y: 128..512)
-  const lw = (W - 28) / 2
-  const drawLeaf = (x0, w) => {
-    const t = 0.92 + r() * 0.16
-    g.fillStyle = `rgb(${[136 * t, 98 * t, 54 * t].map(Math.round)})`
-    g.fillRect(x0, 128, w, H - 128)
-    // wood grain lines
-    for (let k = 0; k < 45; k++) {
-      g.fillStyle = `rgba(${r() < 0.5 ? '50,30,10' : '190,150,90'},${0.08 + r() * 0.14})`
-      g.fillRect(x0 + r() * w, 128 + r() * 320, 1 + r() * 2, 20 + r() * 80)
+  // taped white paper exam notice in wide transom pane (photo door_full_res.jpg)
+  const nx = 42, ny = 36, nw = 56, nh = 46
+  g.fillStyle = '#f0ede4'; g.fillRect(nx, ny, nw, nh)
+  // scotch tape at corners
+  g.fillStyle = 'rgba(230,230,210,0.55)'
+  g.fillRect(nx - 4, ny - 3, 12, 6); g.fillRect(nx + nw - 8, ny - 3, 12, 6)
+  g.fillRect(nx - 4, ny + nh - 3, 12, 6); g.fillRect(nx + nw - 8, ny + nh - 3, 12, 6)
+  // printed text lines
+  g.fillStyle = 'rgba(30,30,30,0.72)'
+  for (let y = ny + 8; y < ny + nh - 4; y += 6) g.fillRect(nx + 6, y, nw - 12 - ((y * 19) % 14), 2)
+
+  // concrete transom rail (y: 124..134)
+  g.fillStyle = '#cca745'; g.fillRect(10, 124, W - 20, 10)
+  g.fillStyle = 'rgba(30,22,10,0.35)'; g.fillRect(10, 132, W - 20, 2)
+
+  // wooden door leaves (y: 134..512): unequal pair (wide leaf on left, narrow on right)
+  const lw1 = tw1, lw2 = tw2
+  const drawChevronLeaf = (x0, w, isLeft) => {
+    const t = 0.94 + r() * 0.14
+    // base timber color: rich golden-amber teak
+    g.fillStyle = `rgb(${[144 * t, 104 * t, 56 * t].map(Math.round)})`
+    g.fillRect(x0, 134, w, H - 134)
+    // realistic fine wood grain
+    for (let k = 0; k < 55; k++) {
+      g.fillStyle = `rgba(${r() < 0.5 ? '45,28,10' : '205,160,95'},${0.07 + r() * 0.13})`
+      g.fillRect(x0 + r() * w, 134 + r() * 340, 1 + r() * 1.8, 25 + r() * 90)
     }
-    // top and bottom recessed panels
-    const pw = w - 14, ph1 = 145, ph2 = 175
-    for (const [py, ph] of [[140, ph1], [305, ph2]]) {
-      g.fillStyle = 'rgba(30,20,10,0.45)'; g.fillRect(x0 + 7, py, pw, ph)
-      g.fillStyle = `rgb(${[120 * t, 85 * t, 46 * t].map(Math.round)})`; g.fillRect(x0 + 9, py + 2, pw - 4, ph - 4)
-      // panel bevels
-      g.fillStyle = 'rgba(230,195,140,0.25)'; g.fillRect(x0 + 9, py + 2, pw - 4, 2); g.fillRect(x0 + 9, py + 2, 2, ph - 4)
-      g.fillStyle = 'rgba(25,15,5,0.35)'; g.fillRect(x0 + 9, py + ph - 4, pw - 4, 2); g.fillRect(x0 + pw + 5, py + 2, 2, ph - 4)
+    // outer stiles and rails
+    const stw = 11, topRy = 146, midRy = 310, botRy = 475
+    // panel regions: upper panel (146..310), lower panel (326..475)
+    for (const [py0, py1, diagDir] of [[topRy, midRy, isLeft ? 1 : -1], [midRy + 16, botRy, isLeft ? -1 : 1]]) {
+      const pw = w - stw * 2, ph = py1 - py0, px0 = x0 + stw
+      // recessed dark panel backing
+      g.fillStyle = 'rgba(25,16,8,0.52)'; g.fillRect(px0, py0, pw, ph)
+      g.fillStyle = `rgb(${[112 * t, 78 * t, 40 * t].map(Math.round)})`
+      g.fillRect(px0 + 2, py0 + 2, pw - 4, ph - 4)
+
+      // authentic diagonal chevron / batten brace across the panel (photo door_full_res.jpg)
+      const bw = 16 // batten width
+      g.save()
+      g.beginPath()
+      g.rect(px0 + 2, py0 + 2, pw - 4, ph - 4)
+      g.clip()
+      // diagonal batten strip
+      g.fillStyle = `rgb(${[140 * t, 100 * t, 54 * t].map(Math.round)})`
+      g.beginPath()
+      if (diagDir > 0) {
+        g.moveTo(px0, py1); g.lineTo(px0 + bw, py1); g.lineTo(px0 + pw, py0 + bw); g.lineTo(px0 + pw, py0); g.lineTo(px0 + pw - bw, py0); g.lineTo(px0, py1 - bw); g.closePath()
+      } else {
+        g.moveTo(px0, py0); g.lineTo(px0 + bw, py0); g.lineTo(px0 + pw, py1 - bw); g.lineTo(px0 + pw, py1); g.lineTo(px0 + pw - bw, py1); g.lineTo(px0, py0 + bw); g.closePath()
+      }
+      g.fill()
+      // batten arris highlight and shadow bevels
+      g.strokeStyle = 'rgba(240,205,150,0.35)'; g.lineWidth = 1.5; g.stroke()
+      g.strokeStyle = 'rgba(20,12,5,0.45)'; g.lineWidth = 1.5
+      g.beginPath()
+      if (diagDir > 0) { g.moveTo(px0, py1); g.lineTo(px0 + pw, py0 + bw) }
+      else { g.moveTo(px0, py0 + bw); g.lineTo(px0 + pw, py1) }
+      g.stroke()
+      g.restore()
+
+      // recessed panel perimeter bevels
+      g.fillStyle = 'rgba(240,200,140,0.28)'; g.fillRect(px0 + 2, py0 + 2, pw - 4, 2); g.fillRect(px0 + 2, py0 + 2, 2, ph - 4)
+      g.fillStyle = 'rgba(20,12,5,0.42)'; g.fillRect(px0 + 2, py1 - 3, pw - 4, 2); g.fillRect(px0 + pw - 3, py0 + 2, 2, ph - 4)
     }
+
+    // middle lock rail
+    g.fillStyle = `rgb(${[146 * t, 106 * t, 58 * t].map(Math.round)})`
+    g.fillRect(x0 + stw, midRy, w - stw * 2, 16)
+    g.fillStyle = 'rgba(245,210,155,0.3)'; g.fillRect(x0 + stw, midRy, w - stw * 2, 1.5)
+    g.fillStyle = 'rgba(20,12,5,0.35)'; g.fillRect(x0 + stw, midRy + 14.5, w - stw * 2, 1.5)
   }
-  drawLeaf(14, lw)
-  drawLeaf(14 + lw + 2, lw)
-  // meeting stile center seam
-  g.fillStyle = '#1c1610'; g.fillRect(14 + lw, 128, 2, H - 128)
-  // brass/silver door handles & escutcheon
-  for (const hx of [14 + lw - 14, 14 + lw + 6]) {
-    g.fillStyle = '#b0a894'; g.fillRect(hx, 305, 8, 32)
-    g.fillStyle = '#e4dfd2'; g.fillRect(hx + 1, 306, 6, 2)
-    g.fillStyle = '#48443b'; g.fillRect(hx + 2, 324, 4, 6) // keyhole
-    g.fillStyle = '#d5cebe'; g.fillRect(hx - 10, 312, 14, 5) // lever handle
-  }
-  // kickplate and dirt along bottom
-  const dg = g.createLinearGradient(0, H - 65, 0, H); dg.addColorStop(0, 'rgba(30,25,20,0)'); dg.addColorStop(1, 'rgba(25,20,15,0.7)')
-  g.fillStyle = dg; g.fillRect(14, H - 65, W - 28, 65)
-  grain(g, W, H, 12, r)
+
+  drawChevronLeaf(14, lw1 - 2, true)
+  drawChevronLeaf(14 + lw1 + 2, lw2, false)
+
+  // meeting stile center seam with dark shadow
+  g.fillStyle = '#140f0a'; g.fillRect(14 + lw1 - 2, 134, 4, H - 134)
+  g.fillStyle = 'rgba(210,175,115,0.35)'; g.fillRect(14 + lw1 + 1, 134, 1.5, H - 134)
+
+  // brass/silver door handle & escutcheon on main leaf
+  const hx = 14 + lw1 - 18
+  g.fillStyle = '#b8b2a0'; g.fillRect(hx, 304, 10, 36) // escutcheon plate
+  g.fillStyle = 'rgba(255,255,245,0.45)'; g.fillRect(hx + 1, 305, 8, 2)
+  g.fillStyle = 'rgba(25,22,18,0.5)'; g.fillRect(hx + 1, 338, 8, 2)
+  g.fillStyle = '#3a3630'; g.fillRect(hx + 3, 324, 4, 7) // keyhole
+  g.fillStyle = '#dcd6c8'; g.fillRect(hx - 14, 312, 18, 6) // lever handle
+  g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(hx - 14, 312, 18, 2)
+
+  // scuffing and kickplate weathering along bottom
+  const dg = g.createLinearGradient(0, H - 70, 0, H); dg.addColorStop(0, 'rgba(25,18,12,0)'); dg.addColorStop(1, 'rgba(20,15,10,0.75)')
+  g.fillStyle = dg; g.fillRect(14, H - 70, W - 28, 70)
+  grain(g, W, H, 10, r)
   return tex(c, { repeat: false })
 }
 
